@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { SupabaseService } from '../../../../lib/supabase-client'
-import { formatDate } from '../../../../lib/utils'
+import { SupabaseService } from '../../../lib/supabase-client'
+import { formatDate } from '../../../lib/utils'
 
 interface BlogPostPageProps {
   params: {

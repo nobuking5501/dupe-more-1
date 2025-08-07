@@ -187,7 +187,7 @@ export default function TestimonialsPage() {
                 </div>
 
                 <blockquote className="text-gray-600 leading-relaxed mb-6 border-l-4 border-primary-200 pl-4">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </blockquote>
 
                 <div className="bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg p-4">

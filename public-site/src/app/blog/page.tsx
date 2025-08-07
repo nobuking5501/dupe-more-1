@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { SupabaseService } from '@shared/lib/supabase-client'
-import { formatDate } from '@shared/lib/utils'
+import { SupabaseService } from '../../../lib/supabase-client'
+import { formatDate } from '../../../lib/utils'
 
 export default async function BlogPage() {
   // 公開されているブログ記事を取得

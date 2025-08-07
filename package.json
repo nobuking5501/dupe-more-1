@@ -1,0 +1,17 @@
+{
+  "name": "dupe-more-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:public": "cd public-site && npm run dev",
+    "dev:admin": "cd admin-panel && npm run dev",
+    "build:public": "cd public-site && npm run build",
+    "build:admin": "cd admin-panel && npm run build",
+    "start:public": "cd public-site && npm run start",
+    "start:admin": "cd admin-panel && npm run start"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

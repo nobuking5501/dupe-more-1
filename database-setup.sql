@@ -59,12 +59,28 @@ CREATE TABLE IF NOT EXISTS news (
   published_at TIMESTAMP WITH TIME ZONE
 );
 
+-- 6. オーナーメッセージテーブル
+CREATE TABLE IF NOT EXISTS owner_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  year_month VARCHAR(7) NOT NULL, -- YYYY-MM format
+  title VARCHAR(255) NOT NULL,
+  body_md TEXT NOT NULL,
+  highlights TEXT[],
+  sources UUID[], -- daily_reports のIDの配列
+  status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  published_at TIMESTAMP WITH TIME ZONE,
+  UNIQUE(year_month, status) -- 月ごとに1つのpublished messageのみ
+);
+
 -- Row Level Security (RLS) の設定
 ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE news ENABLE ROW LEVEL SECURITY;
+ALTER TABLE owner_messages ENABLE ROW LEVEL SECURITY;
 
 -- ポリシーの作成
 
@@ -93,6 +109,12 @@ CREATE POLICY "Allow anon read published news" ON news
 CREATE POLICY "Allow service role full access to news" ON news
   FOR ALL TO service_role USING (true);
 
+CREATE POLICY "Allow anon read published owner messages" ON owner_messages
+  FOR SELECT TO anon USING (status = 'published');
+
+CREATE POLICY "Allow service role full access to owner_messages" ON owner_messages
+  FOR ALL TO service_role USING (true);
+
 -- 初期データの投入
 -- 管理者アカウント（パスワード: admin123）
 INSERT INTO staff (name, email, password_hash, role) 
@@ -105,3 +127,5 @@ CREATE INDEX IF NOT EXISTS idx_blog_posts_created_at ON blog_posts(created_at);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_author ON blog_posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_daily_reports_staff ON daily_reports(staff_id);
 CREATE INDEX IF NOT EXISTS idx_daily_reports_date ON daily_reports(date);
+CREATE INDEX IF NOT EXISTS idx_owner_messages_year_month ON owner_messages(year_month);
+CREATE INDEX IF NOT EXISTS idx_owner_messages_status ON owner_messages(status);

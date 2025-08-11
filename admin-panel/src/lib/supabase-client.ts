@@ -7,18 +7,6 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 // 通常のクライアント（anon key使用）
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// createClient関数をデフォルトエクスポート
-export { createClient } from '@supabase/supabase-js'
-
-// または、createClientのラッパー関数を作成
-export const createSupabaseClient = () => createClient(supabaseUrl, supabaseAnonKey)
-
-console.log('Public site Supabase configuration:', {
-  hasUrl: !!supabaseUrl,
-  hasAnonKey: !!supabaseAnonKey,
-  url: supabaseUrl.substring(0, 30) + '...'
-})
-
 // 管理者用クライアント（service role key使用）
 export const supabaseAdmin = supabaseServiceKey 
   ? createClient(supabaseUrl, supabaseServiceKey, {
@@ -29,6 +17,13 @@ export const supabaseAdmin = supabaseServiceKey
     })
   : null
 
+console.log('Supabase configuration:', {
+  hasUrl: !!supabaseUrl,
+  hasAnonKey: !!supabaseAnonKey,
+  hasServiceKey: !!supabaseServiceKey,
+  hasAdminClient: !!supabaseAdmin
+})
+
 // データベース操作用のヘルパー関数
 export class SupabaseService {
   // 通常のクライアントも公開
@@ -36,8 +31,6 @@ export class SupabaseService {
 
   // ブログ記事の取得
   static async getBlogPosts(status?: 'draft' | 'published') {
-    console.log('Public site: Getting blog posts with status:', status)
-    
     let query = supabase
       .from('blog_posts')
       .select(`
@@ -53,19 +46,7 @@ export class SupabaseService {
       query = query.eq('status', status)
     }
     
-    const result = await query
-    console.log('Public site: Blog posts query result:', {
-      error: result.error,
-      count: result.data?.length || 0,
-      data: result.data?.map(post => ({
-        id: post.id,
-        title: post.title,
-        status: post.status,
-        created_at: post.created_at
-      })) || []
-    })
-    
-    return result
+    return await query
   }
 
   // ブログ記事の作成
@@ -82,16 +63,35 @@ export class SupabaseService {
       throw new Error('Supabase admin client is not available')
     }
 
+    console.log('Creating blog post with data:', {
+      title: data.title,
+      status: data.status,
+      author_id: data.author_id,
+      has_content: !!data.content
+    })
+
     const postData = {
       ...data,
       published_at: data.status === 'published' ? new Date().toISOString() : null
     }
 
-    return await supabaseAdmin
-      .from('blog_posts')
-      .insert([postData])
-      .select()
-      .single()
+    try {
+      const result = await supabaseAdmin
+        .from('blog_posts')
+        .insert([postData])
+        .select()
+        .single()
+
+      console.log('Blog post insert result:', {
+        error: result.error,
+        hasData: !!result.data
+      })
+
+      return result
+    } catch (error) {
+      console.error('Blog post insert error:', error)
+      throw error
+    }
   }
 
   // ブログ記事の更新
@@ -143,6 +143,8 @@ export class SupabaseService {
       throw new Error('Supabase admin client is not available')
     }
 
+    console.log('Getting staff with email:', email)
+
     let query = supabaseAdmin
       .from('staff')
       .select('*')
@@ -151,7 +153,13 @@ export class SupabaseService {
       query = query.eq('email', email)
     }
     
-    return await query
+    const result = await query
+    console.log('Staff query result:', {
+      error: result.error,
+      count: result.data?.length || 0
+    })
+    
+    return result
   }
 
   // スタッフの作成
@@ -165,10 +173,23 @@ export class SupabaseService {
       throw new Error('Supabase admin client is not available')
     }
 
-    return await supabaseAdmin
+    console.log('Creating staff:', {
+      name: data.name,
+      email: data.email,
+      role: data.role
+    })
+
+    const result = await supabaseAdmin
       .from('staff')
       .insert([data])
       .select()
       .single()
+
+    console.log('Staff creation result:', {
+      error: result.error,
+      hasData: !!result.data
+    })
+
+    return result
   }
 }

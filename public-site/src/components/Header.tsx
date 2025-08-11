@@ -14,6 +14,7 @@ const Header = () => {
     { name: 'お客様の声', href: '/testimonials' },
     { name: 'よくある質問', href: '/faq' },
     { name: 'ブログ', href: '/blog' },
+    { name: 'オーナーメッセージ', href: '/owner-message' },
     { name: 'お問い合わせ', href: '/contact' }
   ]
 
@@ -30,18 +31,18 @@ const Header = () => {
               />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-text-primary">Dupe＆more</h1>
+              <h1 className="text-xl font-bold text-text-primary">Dupe&more</h1>
               <p className="text-xs text-text-secondary">デュープアンドモア</p>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-8">
+          <div className="hidden lg:flex items-center space-x-4">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className="text-text-secondary hover:text-accent-400 transition-colors duration-200 font-medium"
+                className="text-text-secondary hover:text-accent-400 transition-colors duration-200 font-medium text-sm px-2 py-1 whitespace-nowrap"
               >
                 {item.name}
               </Link>
@@ -49,6 +50,7 @@ const Header = () => {
             <ActionButton 
               href="/contact" 
               ariaLabel="無料相談を予約する"
+              className="ml-4"
             >
               無料相談予約
             </ActionButton>

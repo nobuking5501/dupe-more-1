@@ -7,25 +7,19 @@ const anthropic = new Anthropic({
 
 console.log('Claude API Key configured:', !!process.env.CLAUDE_API_KEY)
 
-export class ClaudeService {
-  async generateBlogPost(request: ClaudeGenerationRequest): Promise<ClaudeGenerationResponse> {
+export class ClaudeClient {
+  async generateContent(request: { messages: Array<{ role: string, content: string }>, max_tokens?: number }): Promise<string> {
     if (!process.env.CLAUDE_API_KEY) {
       throw new Error('Claude API key is not configured')
     }
 
-    const prompt = this.buildPrompt(request)
-    console.log('Generating blog post with prompt length:', prompt.length)
+    console.log('Generating content with Claude API')
     
     try {
       const completion = await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4000,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+        max_tokens: request.max_tokens || 2000,
+        messages: request.messages
       })
 
       console.log('Claude API response received')
@@ -34,8 +28,7 @@ export class ClaudeService {
         throw new Error('Unexpected response format from Claude API')
       }
 
-      console.log('Parsing Claude response...')
-      return this.parseResponse(content.text)
+      return content.text
     } catch (error: any) {
       console.error('Claude API Error:', {
         message: error.message,
@@ -48,9 +41,22 @@ export class ClaudeService {
       } else if (error.status === 429) {
         throw new Error('Claude APIレート制限に達しました。しばらくしてから再試行してください')
       } else {
-        throw new Error(`ブログ記事の生成に失敗しました: ${error.message}`)
+        throw new Error(`コンテンツの生成に失敗しました: ${error.message}`)
       }
     }
+  }
+
+  async generateBlogPost(request: ClaudeGenerationRequest): Promise<ClaudeGenerationResponse> {
+    const prompt = this.buildPrompt(request)
+    console.log('Generating blog post with prompt length:', prompt.length)
+    
+    const response = await this.generateContent({
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 4000
+    })
+
+    console.log('Parsing blog post response...')
+    return this.parseResponse(response)
   }
 
   private buildPrompt(request: ClaudeGenerationRequest): string {
@@ -130,3 +136,5 @@ ${request.dailyReport}
     }
   }
 }
+
+export class ClaudeService extends ClaudeClient {}

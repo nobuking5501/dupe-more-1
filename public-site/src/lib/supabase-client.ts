@@ -1,174 +1,90 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yaogagvttkpoapkwdrjd.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlhb2dhZ3Z0dGtwb2Fwa3dkcmpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzMTQ2NzQsImV4cCI6MjA2OTg5MDY3NH0.sRSDHAq3XqDP7AmumBJ52RyWXNIzNPBFFHR01bxHjjY'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// 通常のクライアント（anon key使用）
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// createClient関数をデフォルトエクスポート
-export { createClient } from '@supabase/supabase-js'
+export interface OwnerMessage {
+  id: string
+  year_month: string
+  title: string
+  body_md: string
+  highlights: string[]
+  sources: string[]
+  status: 'draft' | 'published'
+  created_at: string
+  updated_at: string
+  published_at?: string
+}
 
-// または、createClientのラッパー関数を作成
-export const createSupabaseClient = () => createClient(supabaseUrl, supabaseAnonKey)
-
-console.log('Public site Supabase configuration:', {
-  hasUrl: !!supabaseUrl,
-  hasAnonKey: !!supabaseAnonKey,
-  url: supabaseUrl.substring(0, 30) + '...'
-})
-
-// 管理者用クライアント（service role key使用）
-export const supabaseAdmin = supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : null
-
-// データベース操作用のヘルパー関数
 export class SupabaseService {
-  // 通常のクライアントも公開
-  static supabase = supabase
+  // Get published owner messages for public site
+  static async getPublishedOwnerMessages(): Promise<{ data: OwnerMessage[] | null, error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('owner_messages')
+        .select('*')
+        .eq('status', 'published')
+        .order('year_month', { ascending: false })
 
-  // ブログ記事の取得
-  static async getBlogPosts(status?: 'draft' | 'published') {
-    console.log('Public site: Getting blog posts with status:', status)
-    
-    let query = supabase
-      .from('blog_posts')
-      .select(`
-        *,
-        staff:author_id (
-          name,
-          email
-        )
-      `)
-      .order('created_at', { ascending: false })
-    
-    if (status) {
-      query = query.eq('status', status)
+      if (error) {
+        console.error('Error fetching owner messages:', error)
+        return { data: null, error }
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('Service error:', error)
+      return { data: null, error }
     }
-    
-    const result = await query
-    console.log('Public site: Blog posts query result:', {
-      error: result.error,
-      count: result.data?.length || 0,
-      data: result.data?.map(post => ({
-        id: post.id,
-        title: post.title,
-        status: post.status,
-        created_at: post.created_at
-      })) || []
-    })
-    
-    return result
   }
 
-  // ブログ記事の作成
-  static async createBlogPost(data: {
-    title: string
-    content: string
-    excerpt: string
-    status: 'draft' | 'published'
-    author_id: string
-    tags?: string[]
-    original_report_id?: string
-  }) {
-    if (!supabaseAdmin) {
-      throw new Error('Supabase admin client is not available')
-    }
+  // Get specific owner message by year-month
+  static async getOwnerMessage(yearMonth: string): Promise<{ data: OwnerMessage | null, error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('owner_messages')
+        .select('*')
+        .eq('year_month', yearMonth)
+        .eq('status', 'published')
+        .single()
 
-    const postData = {
-      ...data,
-      published_at: data.status === 'published' ? new Date().toISOString() : null
-    }
+      if (error) {
+        console.error('Error fetching owner message:', error)
+        return { data: null, error }
+      }
 
-    return await supabaseAdmin
-      .from('blog_posts')
-      .insert([postData])
-      .select()
-      .single()
+      return { data, error: null }
+    } catch (error) {
+      console.error('Service error:', error)
+      return { data: null, error }
+    }
   }
 
-  // ブログ記事の更新
-  static async updateBlogPost(id: string, data: Partial<{
-    title: string
-    content: string
-    excerpt: string
-    status: 'draft' | 'published'
-    tags: string[]
-  }>) {
-    if (!supabaseAdmin) {
-      throw new Error('Supabase admin client is not available')
+  // Get blog posts (existing functionality)
+  static async getBlogPosts(status: 'published' | 'draft' = 'published'): Promise<{ data: any[] | null, error: any }> {
+    try {
+      let query = supabase
+        .from('blog_posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (status === 'published') {
+        query = query.eq('published', true)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Error fetching blog posts:', error)
+        return { data: null, error }
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('Service error:', error)
+      return { data: null, error }
     }
-
-    const updateData = {
-      ...data,
-      updated_at: new Date().toISOString(),
-      published_at: data.status === 'published' ? new Date().toISOString() : undefined
-    }
-
-    return await supabaseAdmin
-      .from('blog_posts')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single()
-  }
-
-  // 日報の作成
-  static async createDailyReport(data: {
-    staff_id: string
-    date: string
-    content: string
-  }) {
-    if (!supabaseAdmin) {
-      throw new Error('Supabase admin client is not available')
-    }
-
-    return await supabaseAdmin
-      .from('daily_reports')
-      .insert([data])
-      .select()
-      .single()
-  }
-
-  // スタッフ情報の取得
-  static async getStaff(email?: string) {
-    if (!supabaseAdmin) {
-      throw new Error('Supabase admin client is not available')
-    }
-
-    let query = supabaseAdmin
-      .from('staff')
-      .select('*')
-    
-    if (email) {
-      query = query.eq('email', email)
-    }
-    
-    return await query
-  }
-
-  // スタッフの作成
-  static async createStaff(data: {
-    name: string
-    email: string
-    password_hash: string
-    role?: 'admin' | 'staff'
-  }) {
-    if (!supabaseAdmin) {
-      throw new Error('Supabase admin client is not available')
-    }
-
-    return await supabaseAdmin
-      .from('staff')
-      .insert([data])
-      .select()
-      .single()
   }
 }

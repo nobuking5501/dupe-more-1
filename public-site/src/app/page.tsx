@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import ShortsToday from '@/components/ShortsToday'
 
 export default function Home() {
   return (
@@ -42,6 +43,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Today's Shorts Section */}
+      <ShortsToday />
 
       {/* Features Section */}
       <section className="section-padding bg-white">

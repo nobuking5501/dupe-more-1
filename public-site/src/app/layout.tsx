@@ -12,21 +12,6 @@ export const metadata: Metadata = {
     description: '障害を持つお子さまとご家族が安心して通える、やさしい脱毛サロンです。',
     type: 'website',
   },
-  icons: {
-    icon: [
-      { url: '/images/aicon01.png', sizes: '32x32', type: 'image/png' },
-      { url: '/images/aicon01.png', sizes: '16x16', type: 'image/png' }
-    ],
-    apple: [
-      { url: '/images/aicon01.png', sizes: '180x180', type: 'image/png' }
-    ],
-  },
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'Dupe＆more',
-  },
 }
 
 export default function RootLayout({

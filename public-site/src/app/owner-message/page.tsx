@@ -1,186 +1,180 @@
-'use client';
+import { Metadata } from 'next'
+import Link from 'next/link'
+import { SupabaseService, OwnerMessage } from '@/lib/supabase-client'
 
-import { useState, useEffect } from 'react';
-import { createSupabaseClient } from '@/lib/supabase-client';
-
-interface OwnerMessage {
-  id: string;
-  year_month: string;
-  title: string;
-  body_md: string;
-  highlights: string[];
-  published_at: string;
+export const metadata: Metadata = {
+  title: 'オーナーメッセージ | Dupe&more',
+  description: 'サロンオーナーからのメッセージをお届けします。',
 }
 
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
+// Format year-month for display
 function formatYearMonth(yearMonth: string): string {
-  const [year, month] = yearMonth.split('-');
-  return `${year}年${parseInt(month)}月`;
+  const [year, month] = yearMonth.split('-')
+  return `${year}年${parseInt(month)}月`
 }
 
-function renderMarkdown(markdown: string): JSX.Element {
-  // 簡単なマークダウンレンダリング
-  const lines = markdown.split('\n');
-  const elements: JSX.Element[] = [];
-  
-  lines.forEach((line, index) => {
-    if (line.startsWith('## ')) {
-      elements.push(
-        <h3 key={index} className="text-xl font-semibold text-gray-800 mt-6 mb-3">
-          {line.replace('## ', '')}
-        </h3>
-      );
-    } else if (line.trim() !== '') {
-      elements.push(
-        <p key={index} className="text-gray-700 mb-4 leading-relaxed">
-          {line}
-        </p>
-      );
-    }
-  });
-  
-  return <div className="prose max-w-none">{elements}</div>;
+// Convert markdown to HTML (simple implementation)
+function markdownToHtml(markdown: string): string {
+  return markdown
+    .replace(/## (.+)/g, '<h2 class="text-xl font-semibold text-gray-900 mb-3 mt-6">$1</h2>')
+    .replace(/### (.+)/g, '<h3 class="text-lg font-semibold text-gray-800 mb-2 mt-4">$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\n\n/g, '</p><p class="text-gray-700 leading-relaxed mb-4">')
+    .replace(/\n/g, '<br>')
 }
 
-export default function OwnerMessagePage() {
-  const [messages, setMessages] = useState<OwnerMessage[]>([]);
-  const [loading, setLoading] = useState(true);
+async function getOwnerMessages(): Promise<OwnerMessage[]> {
+  const result = await SupabaseService.getPublishedOwnerMessages()
+  return result.data || []
+}
 
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const supabase = createSupabaseClient();
-        
-        const { data, error } = await supabase
-          .from('owner_messages')
-          .select('id, year_month, title, body_md, highlights, published_at')
-          .eq('status', 'published')
-          .order('year_month', { ascending: false })
-          .limit(12);
-
-        if (error) {
-          console.error('オーナーメッセージ取得エラー:', error);
-        } else {
-          setMessages(data || []);
-        }
-      } catch (error) {
-        console.error('メッセージ取得エラー:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMessages();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-16 text-center">
-          <div className="text-gray-500 text-lg">読み込み中...</div>
-        </div>
-      </div>
-    );
-  }
+export default async function OwnerMessagePage() {
+  const messages = await getOwnerMessages()
 
   return (
-    <>
-      <div className="min-h-screen bg-gray-50">
-        {/* ヒーローセクション */}
-        <div className="bg-white">
-          <div className="container mx-auto px-4 py-16 text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              オーナーメッセージ
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Dupe&moreオーナーからお客様へのメッセージです。日々の想いや学びを共有させていただいています。
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm">
+        <div className="container-custom py-8">
+          <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <Link href="/" className="hover:text-gray-900">
+              ホーム
+            </Link>
+            <span>›</span>
+            <span className="text-gray-900">オーナーメッセージ</span>
+          </nav>
+          
+          <h1 className="text-3xl font-bold text-gray-900">
+            オーナーメッセージ
+          </h1>
+          <p className="text-gray-600 mt-2">
+            サロンオーナーからのメッセージをお届けします
+          </p>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="container-custom py-8">
+        {messages.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <div className="text-gray-400 text-5xl mb-4">📮</div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              メッセージはまだありません
+            </h2>
+            <p className="text-gray-600">
+              新しいメッセージが公開されるとこちらに表示されます。
             </p>
           </div>
-        </div>
-
-        {/* メッセージ一覧 */}
-        <div className="container mx-auto px-4 py-16">
-          {messages.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-500 text-lg">
-                現在、公開中のメッセージはございません。
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-4xl mx-auto space-y-12">
-              {messages.map((message, index) => (
-                <article 
-                  key={message.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden"
-                >
-                  {/* メッセージ本文 */}
-                  <div className="px-8 py-8">
-                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-                      <h2 className="text-2xl font-bold text-gray-900">
+        ) : (
+          <div className="space-y-8">
+            {messages.map((message) => (
+              <article
+                key={message.id}
+                className="bg-white rounded-lg shadow-sm overflow-hidden"
+              >
+                {/* Message Header */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-1">
                         {message.title}
                       </h2>
-                      <div className="text-sm text-gray-600">
-                        {formatDate(message.published_at)}
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <span className="font-medium">
+                          {formatYearMonth(message.year_month)}
+                        </span>
+                        {message.published_at && (
+                          <span>
+                            公開日: {new Date(message.published_at).toLocaleDateString('ja-JP')}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    
-                    {/* ハイライト */}
-                    {message.highlights && message.highlights.length > 0 && (
-                      <div className="mb-6">
-                        <div className="flex flex-wrap gap-2">
-                          {message.highlights.map((highlight, highlightIndex) => (
-                            <span
-                              key={highlightIndex}
-                              className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium"
-                            >
-                              {highlight}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {renderMarkdown(message.body_md)}
                   </div>
+                </div>
 
-                  {/* メッセージフッター */}
-                  <div className="bg-gray-50 px-8 py-4 border-t">
-                    <div className="text-right text-sm text-gray-500">
-                      {formatYearMonth(message.year_month)}のメッセージ
+                {/* Highlights */}
+                {message.highlights && message.highlights.length > 0 && (
+                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                      今月のハイライト
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {message.highlights.map((highlight, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        >
+                          {highlight}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                </article>
-              ))}
-            </div>
-          )}
+                )}
 
-          {/* お問い合わせCTA */}
-          <div className="mt-20 text-center">
-            <div className="bg-white rounded-lg shadow-md p-8 max-w-2xl mx-auto">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                ご質問・ご相談はお気軽に
-              </h3>
-              <p className="text-gray-600 mb-6">
-                サロンについてご不明な点がございましたら、お気軽にお問い合わせください。
-              </p>
-              <a
-                href="/contact"
-                className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                お問い合わせ
-              </a>
-            </div>
+                {/* Message Content */}
+                <div className="px-6 py-6">
+                  <div 
+                    className="prose max-w-none"
+                    dangerouslySetInnerHTML={{
+                      __html: `<p class="text-gray-700 leading-relaxed mb-4">${markdownToHtml(message.body_md)}</p>`
+                    }}
+                  />
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <span>
+                      Dupe&more オーナー
+                    </span>
+                    <div className="flex items-center space-x-4">
+                      <Link
+                        href="/contact"
+                        className="text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        お問い合わせ
+                      </Link>
+                      <Link
+                        href="/services"
+                        className="text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        サービス詳細
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {/* Call to Action */}
+        <div className="mt-12 bg-white rounded-lg shadow-sm p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            初めての方へ
+          </h2>
+          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+            お一人お一人に寄り添ったサービスを心がけています。
+            初回のご来店でもリラックしてお過ごしいただけるよう、丁寧にご対応いたします。
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/services"
+              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            >
+              サービス一覧
+            </Link>
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            >
+              お問い合わせ
+            </Link>
           </div>
         </div>
       </div>
-    </>
-  );
+    </div>
+  )
 }

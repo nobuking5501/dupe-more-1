@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { SupabaseService } from '@shared/lib/supabase-client'
-import { formatDate } from '@shared/lib/utils'
+import { SupabaseService } from '@/lib/supabase-client'
+import { formatDate } from '@/lib/utils'
 
 interface BlogPostPageProps {
   params: {
@@ -10,24 +10,13 @@ interface BlogPostPageProps {
 }
 
 async function getBlogPost(id: string) {
-  const { data, error } = await SupabaseService.supabase
-    .from('blog_posts')
-    .select(`
-      *,
-      staff:author_id (
-        name,
-        email
-      )
-    `)
-    .eq('id', id)
-    .eq('status', 'published')
-    .single()
-
-  if (error || !data) {
+  const result = await SupabaseService.getBlogPost(id)
+  
+  if (result.error || !result.data) {
     return null
   }
 
-  return data
+  return result.data
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {

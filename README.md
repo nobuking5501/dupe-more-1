@@ -1,2 +1,11 @@
-# dupe-more-1
-# dupe-more-admin
+# Dupe&More Public Site
+
+Next.js公開サイト
+
+## 機能
+- 企業サイト表示
+- ブログ機能
+- お問い合わせ
+
+## デプロイテスト
+- 自動デプロイテスト中... (テストコメント追加)

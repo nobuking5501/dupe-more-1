@@ -10,9 +10,11 @@ const Footer = () => {
   ]
 
   const supportLinks = [
-    { name: 'よくある質問', href: '/faq' },
+    { name: 'FAQ', href: '/faq' },
+    { name: 'メッセージ', href: '/owner-message' },
+    { name: '小話', href: '/shorts' },
     { name: 'ブログ', href: '/blog' },
-    { name: 'お問い合わせ', href: '/contact' },
+    { name: 'お問合せ', href: '/contact' },
     { name: 'プライバシーポリシー', href: '/privacy' }
   ]
 

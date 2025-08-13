@@ -87,4 +87,32 @@ export class SupabaseService {
       return { data: null, error }
     }
   }
+
+  // Get specific blog post by ID
+  static async getBlogPost(id: string): Promise<{ data: any | null, error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select(`
+          *,
+          staff:author_id (
+            name,
+            email
+          )
+        `)
+        .eq('id', id)
+        .eq('published', true)
+        .single()
+
+      if (error) {
+        console.error('Error fetching blog post:', error)
+        return { data: null, error }
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('Service error:', error)
+      return { data: null, error }
+    }
+  }
 }

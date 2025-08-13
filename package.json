@@ -1,17 +1,28 @@
 {
-  "name": "dupe-more-workspace",
-  "version": "1.0.0",
+  "name": "dupe-more-public",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:public": "cd public-site && npm run dev",
-    "dev:admin": "cd admin-panel && npm run dev",
-    "build:public": "cd public-site && npm run build",
-    "build:admin": "cd admin-panel && npm run build",
-    "start:public": "cd public-site && npm run start",
-    "start:admin": "cd admin-panel && npm run start"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "^18",
+    "react-dom": "^18",
+    "@supabase/supabase-js": "^2.38.0"
   },
   "devDependencies": {
+    "typescript": "^5",
     "@types/node": "^20",
-    "typescript": "^5"
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "tailwindcss": "^3.4.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8",
+    "autoprefixer": "^10.0.1"
   }
 }

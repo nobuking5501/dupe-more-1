@@ -12,9 +12,11 @@ const Header = () => {
     { name: 'コンセプト', href: '/concept' },
     { name: 'サービス', href: '/services' },
     { name: 'お客様の声', href: '/testimonials' },
-    { name: 'よくある質問', href: '/faq' },
+    { name: 'メッセージ', href: '/owner-message' },
+    { name: '小話', href: '/shorts' },
+    { name: 'FAQ', href: '/faq' },
     { name: 'ブログ', href: '/blog' },
-    { name: 'お問い合わせ', href: '/contact' }
+    { name: 'お問合せ', href: '/contact' }
   ]
 
   return (

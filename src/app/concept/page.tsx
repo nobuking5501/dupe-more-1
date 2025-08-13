@@ -117,7 +117,7 @@ export default function ConceptPage() {
                   男の子のお客さま：
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  「毎朝のヒゲ剃りが面倒で嫌がっていたのに、すごく楽になって本人も喜んでいます」
+                  「毎朝のヒゲ剃りが面倖で嫌がっていたのに、すごく楽になって本人も喜んでいます」
                 </p>
               </div>
               <div className="card p-8">

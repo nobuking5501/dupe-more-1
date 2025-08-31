@@ -158,6 +158,31 @@ ${formData.message}
 
       <div className="container-custom py-12">
         <div className="max-w-4xl mx-auto">
+          {/* LINE お問い合わせ */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="text-2xl mr-3">💬</div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    公式LINEからお問い合わせ
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    お気軽にLINEでご相談ください。迅速に対応いたします。
+                  </p>
+                </div>
+              </div>
+              <a
+                href="https://lin.ee/YSahAAB"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-6 py-3 bg-green-500 text-white font-medium rounded-md hover:bg-green-600 transition-colors"
+              >
+                <span className="mr-2">📱</span>
+                LINEで相談
+              </a>
+            </div>
+          </div>
           {/* タブナビゲーション */}
           <div className="bg-white rounded-lg shadow-sm mb-8">
             <div className="border-b border-gray-200">

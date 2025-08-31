@@ -57,8 +57,8 @@ export default async function BlogPage() {
                 )}
                 <div className="p-6">
                   <div className="flex items-center text-sm text-gray-500 mb-3">
-                    <time dateTime={post.published_at}>
-                      {formatDate(post.published_at)}
+                    <time dateTime={post.published_at || post.created_at}>
+                      {formatDate(post.published_at || post.created_at)}
                     </time>
                     {post.staff?.name && (
                       <>
@@ -90,7 +90,7 @@ export default async function BlogPage() {
                   )}
                   
                   <Link
-                    href={`/blog/${post.id}`}
+                    href={`/blog/${post.slug || post.id}`}
                     className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium text-sm"
                   >
                     続きを読む

@@ -29,6 +29,59 @@ export class ShortsClient {
 
       const { data, error } = await query
 
+      // shortsテーブルにデータがない場合、short_storiesテーブルから取得
+      if (!data || data.length === 0) {
+        console.log('No shorts data found, trying short_stories table')
+        try {
+          let storiesQuery = supabase
+            .from('short_stories')
+            .select('*')
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+
+          if (limit) {
+            storiesQuery = storiesQuery.limit(limit)
+          }
+
+          const { data: storiesData, error: storiesError } = await storiesQuery
+
+          if (!storiesError && storiesData && storiesData.length > 0) {
+            // short_storiesのデータをShortsの形式に変換
+            const convertedData = storiesData.map(story => ({
+              id: story.id,
+              title: story.title,
+              body_md: story.content,
+              tags: [story.emotional_tone],
+              status: 'published' as const,
+              pii_risk_score: 0,
+              source_report_ids: [story.source_report_id],
+              created_at: story.created_at,
+              published_at: story.created_at,
+              updated_at: story.updated_at || story.created_at
+            }))
+            
+            console.log('Using short_stories data:', convertedData.length, 'items')
+            return { data: convertedData, error: null }
+          }
+        } catch (storiesError) {
+          console.error('Error fetching short stories:', storiesError)
+        }
+
+        // short_storiesもない場合、admin-generated shortsを取得
+        try {
+          const adminResponse = await fetch('/api/admin-shorts')
+          if (adminResponse.ok) {
+            const adminData = await adminResponse.json()
+            if (adminData && adminData.length > 0) {
+              console.log('Using admin-generated shorts:', adminData.length, 'items')
+              return { data: adminData.slice(0, limit || adminData.length), error: null }
+            }
+          }
+        } catch (adminError) {
+          console.error('Error fetching admin shorts:', adminError)
+        }
+      }
+
       if (error) {
         console.error('Error fetching published shorts:', error)
         return { data: null, error }

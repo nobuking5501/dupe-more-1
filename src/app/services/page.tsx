@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { Metadata } from 'next'
+import PricingSection from '@/components/pricing/PricingSection'
 
 export const metadata: Metadata = {
-  title: 'サービス紹介 - Dupe＆more（デュープアンドモア）',
-  description: '障害児専門脱毛サロンの脱毛メニュー、施術方法、サービス利用の流れをご紹介します。',
+  title: 'サービス・料金 - Dupe＆more（デュープアンドモア）',
+  description: '障害児専門脱毛サロンの脱毛メニュー、料金表、施術方法、サービス利用の流れをご紹介します。',
 }
 
 export default function ServicesPage() {
@@ -22,141 +23,9 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* Services Menu Section */}
-      <section className="section-padding bg-white">
-        <div className="container-custom">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
-              脱毛メニュー
-            </h2>
-            <p className="text-xl text-gray-600">
-              お子さまの状況に応じて最適なプランをご提案
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="card p-8">
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-primary-400 to-primary-500 rounded-full flex items-center justify-center mr-4">
-                  <span className="text-white text-2xl">✨</span>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-semibold text-gray-800">全身脱毛プラン</h3>
-                  <p className="text-gray-600">体全体の脱毛ケア</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術回数</span>
-                  <span className="font-semibold">8〜12回</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術間隔</span>
-                  <span className="font-semibold">4〜6週間</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術時間</span>
-                  <span className="font-semibold">60〜90分</span>
-                </div>
-                <p className="text-gray-600 leading-relaxed">
-                  全身の気になる部位を総合的にケア。お子さまの体調や集中力に合わせて、
-                  複数回に分けて施術することも可能です。
-                </p>
-              </div>
-            </div>
-
-            <div className="card p-8">
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-secondary-400 to-secondary-500 rounded-full flex items-center justify-center mr-4">
-                  <span className="text-white text-2xl">👤</span>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-semibold text-gray-800">部分脱毛プラン</h3>
-                  <p className="text-gray-600">気になる部位を選択</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術回数</span>
-                  <span className="font-semibold">6〜10回</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術間隔</span>
-                  <span className="font-semibold">4〜6週間</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術時間</span>
-                  <span className="font-semibold">30〜60分</span>
-                </div>
-                <p className="text-gray-600 leading-relaxed">
-                  顔・腕・足・ワキなど、特に気になる部位を集中的にケア。
-                  短時間で負担が少ないため、初めての方にもおすすめです。
-                </p>
-              </div>
-            </div>
-
-            <div className="card p-8">
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-accent-400 to-accent-500 rounded-full flex items-center justify-center mr-4">
-                  <span className="text-white text-2xl">🌱</span>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-semibold text-gray-800">お試しプラン</h3>
-                  <p className="text-gray-600">初回限定体験コース</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術回数</span>
-                  <span className="font-semibold">1回</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術部位</span>
-                  <span className="font-semibold">小範囲（腕や足の一部）</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術時間</span>
-                  <span className="font-semibold">15〜30分</span>
-                </div>
-                <p className="text-gray-600 leading-relaxed">
-                  サロンの雰囲気や施術の感覚に慣れていただくための体験コース。
-                  お子さまが安心できるかを確認してから本格的な施術に進めます。
-                </p>
-              </div>
-            </div>
-
-            <div className="card p-8">
-              <div className="flex items-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-purple-500 rounded-full flex items-center justify-center mr-4">
-                  <span className="text-white text-2xl">💙</span>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-semibold text-gray-800">ケアプラン</h3>
-                  <p className="text-gray-600">アフターケア＆メンテナンス</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術回数</span>
-                  <span className="font-semibold">月1〜2回</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術内容</span>
-                  <span className="font-semibold">メンテナンス＆スキンケア</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-700">施術時間</span>
-                  <span className="font-semibold">30〜45分</span>
-                </div>
-                <p className="text-gray-600 leading-relaxed">
-                  脱毛完了後の状態を維持するためのメンテナンスと、
-                  お肌のケアを継続的に行うプランです。
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Pricing Section */}
+      <PricingSection />
 
       {/* Method Section */}
       <section className="section-padding bg-gradient-to-r from-gray-50 to-blue-50">

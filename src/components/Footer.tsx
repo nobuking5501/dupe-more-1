@@ -6,12 +6,12 @@ const Footer = () => {
     { name: 'ホーム', href: '/' },
     { name: 'コンセプト', href: '/concept' },
     { name: 'サービス', href: '/services' },
-    { name: 'お客様の声', href: '/testimonials' }
+    { name: 'お客様の声', href: '/testimonials' },
+    { name: '会社概要', href: '/company' }
   ]
 
   const supportLinks = [
     { name: 'FAQ', href: '/faq' },
-    { name: 'メッセージ', href: '/owner-message' },
     { name: '小話', href: '/shorts' },
     { name: 'ブログ', href: '/blog' },
     { name: 'お問合せ', href: '/contact' },

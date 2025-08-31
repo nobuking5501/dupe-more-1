@@ -62,7 +62,7 @@ export class SupabaseService {
     }
   }
 
-  // Get blog posts (existing functionality)
+  // Get blog posts (updated for new schema)
   static async getBlogPosts(status: 'published' | 'draft' = 'published'): Promise<{ data: any[] | null, error: any }> {
     try {
       let query = supabase
@@ -71,7 +71,7 @@ export class SupabaseService {
         .order('created_at', { ascending: false })
 
       if (status === 'published') {
-        query = query.eq('published', true)
+        query = query.eq('status', 'published')
       }
 
       const { data, error } = await query
@@ -81,7 +81,14 @@ export class SupabaseService {
         return { data: null, error }
       }
 
-      return { data, error: null }
+      // データを既存のフォーマットに変換
+      const formattedData = data?.map(post => ({
+        ...post,
+        published: post.status === 'published',
+        staff: { name: post.author_name }
+      })) || []
+
+      return { data: formattedData, error: null }
     } catch (error) {
       console.error('Service error:', error)
       return { data: null, error }
@@ -93,15 +100,9 @@ export class SupabaseService {
     try {
       const { data, error } = await supabase
         .from('blog_posts')
-        .select(`
-          *,
-          staff:author_id (
-            name,
-            email
-          )
-        `)
+        .select('*')
         .eq('id', id)
-        .eq('published', true)
+        .eq('status', 'published')
         .single()
 
       if (error) {
@@ -109,7 +110,48 @@ export class SupabaseService {
         return { data: null, error }
       }
 
-      return { data, error: null }
+      // データを既存のフォーマットに変換
+      const formattedData = {
+        ...data,
+        published: data.status === 'published',
+        staff: { name: 'かなえ' }
+      }
+
+      return { data: formattedData, error: null }
+    } catch (error) {
+      console.error('Service error:', error)
+      return { data: null, error }
+    }
+  }
+
+  // Get specific blog post by slug
+  static async getBlogPostBySlug(slug: string): Promise<{ data: any | null, error: any }> {
+    try {
+      console.log('Fetching blog post by slug:', slug)
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .single()
+
+      console.log('Blog post query result:', { data, error })
+
+      if (error) {
+        console.error('Error fetching blog post by slug:', error)
+        return { data: null, error }
+      }
+
+      // データを既存のフォーマットに変換
+      const formattedData = {
+        ...data,
+        published: data.status === 'published',
+        published_at: data.created_at, // Use created_at if published_at is null
+        staff: { name: 'かなえ' }
+      }
+
+      console.log('Formatted blog post data:', formattedData)
+      return { data: formattedData, error: null }
     } catch (error) {
       console.error('Service error:', error)
       return { data: null, error }

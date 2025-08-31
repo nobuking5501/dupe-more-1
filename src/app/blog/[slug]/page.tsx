@@ -9,8 +9,14 @@ interface BlogPostPageProps {
   }
 }
 
-async function getBlogPost(id: string) {
-  const result = await SupabaseService.getBlogPost(id)
+async function getBlogPost(slugOrId: string) {
+  // Try to get by slug first, then by ID
+  let result = await SupabaseService.getBlogPostBySlug(slugOrId)
+  
+  if (result.error || !result.data) {
+    // If slug fails, try by ID (backward compatibility)
+    result = await SupabaseService.getBlogPost(slugOrId)
+  }
   
   if (result.error || !result.data) {
     return null
@@ -98,11 +104,18 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
         {/* 本文 */}
         <div className="container-custom py-8">
-          <div className="prose prose-lg max-w-none">
+          <div className="max-w-4xl mx-auto">
+            {/* Render content with 20-25 character line break rule formatting */}
             <div 
-              dangerouslySetInnerHTML={{ __html: post.content }}
-              className="text-gray-800 leading-relaxed"
-            />
+              className="text-gray-700 text-lg leading-loose whitespace-pre-line blog-content"
+              style={{
+                lineHeight: '2.2',
+                letterSpacing: '0.02em',
+                fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif'
+              }}
+            >
+              {post.content}
+            </div>
           </div>
         </div>
 

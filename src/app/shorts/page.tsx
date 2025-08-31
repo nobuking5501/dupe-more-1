@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { ShortsClient, Short } from '@/lib/shorts-client'
+import { supabase } from '@/lib/supabase-client'
 import ShortsListing from './ShortsListing'
 
 export const metadata: Metadata = {
@@ -13,18 +14,77 @@ export const metadata: Metadata = {
   },
 }
 
-async function getInitialData() {
-  const [shortsResult, tagsResult] = await Promise.all([
-    ShortsClient.getPaginatedShorts(1, 12),
-    ShortsClient.getTags()
-  ])
+// Force dynamic rendering to get latest data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
-  return {
-    shorts: shortsResult.data || [],
-    totalCount: shortsResult.totalCount,
-    totalPages: shortsResult.totalPages,
-    tags: tagsResult.data || [],
-    error: shortsResult.error || tagsResult.error
+async function getInitialData() {
+  try {
+    // Directly use Supabase to get latest short stories
+    console.log('Fetching shorts directly from Supabase for /shorts page')
+    const { data: stories, error } = await supabase
+      .from('short_stories')
+      .select('*')
+      .eq('status', 'active')
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(12)
+
+    if (error) {
+      console.error('Supabase error in /shorts page:', error)
+    } else if (stories && stories.length > 0) {
+      console.log('Supabase shorts fetched for /shorts page:', stories.length, 'items')
+      
+      // Convert to Short format (same as admin-shorts API)
+      const formattedShorts = stories.map(story => ({
+        id: story.id,
+        title: story.title,
+        body_md: story.content,
+        tags: [story.emotional_tone],
+        status: 'published' as const,
+        pii_risk_score: 0,
+        source_report_ids: [story.source_report_id],
+        created_at: story.created_at,
+        published_at: story.created_at,
+        updated_at: story.updated_at || story.created_at
+      }))
+
+      // Extract unique tags
+      const allTags = formattedShorts.flatMap((item: Short) => item.tags || [])
+      const uniqueTags = Array.from(new Set(allTags)).sort()
+      
+      return {
+        shorts: formattedShorts,
+        totalCount: formattedShorts.length,
+        totalPages: Math.ceil(formattedShorts.length / 12),
+        tags: uniqueTags,
+        error: null
+      }
+    }
+    
+    // Fallback to ShortsClient if Supabase fails
+    console.log('Falling back to ShortsClient')
+    const [shortsResult, tagsResult] = await Promise.all([
+      ShortsClient.getPaginatedShorts(1, 12),
+      ShortsClient.getTags()
+    ])
+
+    return {
+      shorts: shortsResult.data || [],
+      totalCount: shortsResult.totalCount,
+      totalPages: shortsResult.totalPages,
+      tags: tagsResult.data || [],
+      error: shortsResult.error || tagsResult.error
+    }
+  } catch (error) {
+    console.error('Error fetching initial data for /shorts:', error)
+    return {
+      shorts: [],
+      totalCount: 0,
+      totalPages: 0,
+      tags: [],
+      error: error
+    }
   }
 }
 

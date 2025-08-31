@@ -28,25 +28,61 @@ export default function ShortsListing({
   const fetchShorts = async (page: number = 1) => {
     setLoading(true)
     try {
-      let result
+      // Use admin-shorts API for latest Supabase data
+      const adminResponse = await fetch('/api/admin-shorts')
+      
+      if (adminResponse.ok) {
+        const adminShorts = await adminResponse.json()
+        let filteredShorts = adminShorts
 
-      if (searchQuery.trim()) {
-        result = await ShortsClient.searchShorts(searchQuery.trim())
-        setTotalPages(1)
-        setCurrentPage(1)
-      } else if (selectedTag) {
-        result = await ShortsClient.getShortsByTag(selectedTag)
-        setTotalPages(1)
-        setCurrentPage(1)
-      } else {
-        result = await ShortsClient.getPaginatedShorts(page, 12)
-        setTotalPages(result.totalPages)
+        // Apply search filter
+        if (searchQuery.trim()) {
+          const query = searchQuery.trim().toLowerCase()
+          filteredShorts = adminShorts.filter((short: Short) =>
+            short.title.toLowerCase().includes(query) ||
+            short.body_md.toLowerCase().includes(query)
+          )
+        }
+
+        // Apply tag filter
+        if (selectedTag) {
+          filteredShorts = adminShorts.filter((short: Short) =>
+            short.tags.includes(selectedTag)
+          )
+        }
+
+        // Apply pagination
+        const pageSize = 12
+        const start = (page - 1) * pageSize
+        const end = start + pageSize
+        const paginatedShorts = filteredShorts.slice(start, end)
+
+        setShorts(paginatedShorts)
+        setTotalCount(filteredShorts.length)
+        setTotalPages(Math.ceil(filteredShorts.length / pageSize))
         setCurrentPage(page)
-      }
+      } else {
+        // Fallback to ShortsClient
+        let result
 
-      if (result.data) {
-        setShorts(result.data)
-        setTotalCount(result.data.length)
+        if (searchQuery.trim()) {
+          result = await ShortsClient.searchShorts(searchQuery.trim())
+          setTotalPages(1)
+          setCurrentPage(1)
+        } else if (selectedTag) {
+          result = await ShortsClient.getShortsByTag(selectedTag)
+          setTotalPages(1)
+          setCurrentPage(1)
+        } else {
+          result = await ShortsClient.getPaginatedShorts(page, 12)
+          setTotalPages(result.totalPages)
+          setCurrentPage(page)
+        }
+
+        if (result.data) {
+          setShorts(result.data)
+          setTotalCount(result.data.length)
+        }
       }
     } catch (error) {
       console.error('Error fetching shorts:', error)

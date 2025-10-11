@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { FirebaseService } from '@/lib/firebase-client'
+import { adminDb } from '@/lib/firebaseAdmin'
 import { formatDate } from '@/lib/utils'
 
 interface BlogPostPageProps {
@@ -10,19 +10,64 @@ interface BlogPostPageProps {
 }
 
 async function getBlogPost(slugOrId: string) {
-  // Try to get by slug first, then by ID
-  let result = await FirebaseService.getBlogPostBySlug(slugOrId)
+  try {
+    // Try to get by slug first
+    const slugQuery = await adminDb
+      .collection('blog_posts')
+      .where('slug', '==', slugOrId)
+      .where('status', '==', 'published')
+      .limit(1)
+      .get()
 
-  if (result.error || !result.data) {
-    // If slug fails, try by ID (backward compatibility)
-    result = await FirebaseService.getBlogPost(slugOrId)
-  }
+    if (!slugQuery.empty) {
+      const doc = slugQuery.docs[0]
+      const data = doc.data()
+      return {
+        id: doc.id,
+        title: data.title,
+        content: data.content,
+        slug: data.slug,
+        excerpt: data.excerpt || data.summary,
+        tags: data.tags || [],
+        image_url: data.image_url,
+        status: data.status,
+        published_at: data.publishedAt?.toDate().toISOString() || data.createdAt?.toDate().toISOString(),
+        created_at: data.createdAt?.toDate().toISOString(),
+        updated_at: data.updatedAt?.toDate().toISOString(),
+        staff: { name: data.authorName || 'かなえ' }
+      }
+    }
 
-  if (result.error || !result.data) {
+    // Try by ID (backward compatibility)
+    const docRef = await adminDb.collection('blog_posts').doc(slugOrId).get()
+
+    if (!docRef.exists) {
+      return null
+    }
+
+    const data = docRef.data()
+    if (data?.status !== 'published') {
+      return null
+    }
+
+    return {
+      id: docRef.id,
+      title: data.title,
+      content: data.content,
+      slug: data.slug,
+      excerpt: data.excerpt || data.summary,
+      tags: data.tags || [],
+      image_url: data.image_url,
+      status: data.status,
+      published_at: data.publishedAt?.toDate().toISOString() || data.createdAt?.toDate().toISOString(),
+      created_at: data.createdAt?.toDate().toISOString(),
+      updated_at: data.updatedAt?.toDate().toISOString(),
+      staff: { name: data.authorName || 'かなえ' }
+    }
+  } catch (error) {
+    console.error('Error fetching blog post:', error)
     return null
   }
-
-  return result.data
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {

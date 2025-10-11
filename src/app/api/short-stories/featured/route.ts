@@ -40,6 +40,7 @@ export async function GET() {
       keyMoment: docData.keyMoment,
       emotionalTone: docData.emotionalTone,
       isFeatured: docData.isFeatured,
+      sourceReportId: docData.sourceReportId || docData.source_report_id || '',
       createdAt: docData.createdAt?.toDate().toISOString(),
       updatedAt: docData.updatedAt?.toDate().toISOString()
     }

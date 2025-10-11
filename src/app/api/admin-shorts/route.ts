@@ -29,7 +29,8 @@ export async function GET() {
       return b._createdAt - a._createdAt
     })
 
-    const stories = allStories.slice(0, 5)
+    // 全ての小話を返す（以前は.slice(0, 5)で5件のみ）
+    const stories = allStories
 
     // ShortsToday用の形式に変換（snake_caseに）
     const formattedShorts = stories.map((story: any) => ({

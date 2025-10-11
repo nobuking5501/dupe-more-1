@@ -3,24 +3,36 @@ import { adminDb } from '@/lib/firebaseAdmin'
 
 export async function GET() {
   try {
-    // Firestoreから最新の小話を取得（isFeatured=trueを優先）
+    // Firestoreから最新の小話を取得（statusフィルターのみ、インデックス不要）
     const storiesSnapshot = await adminDb
       .collection('short_stories')
       .where('status', '==', 'active')
-      .orderBy('isFeatured', 'desc')
-      .orderBy('createdAt', 'desc')
-      .limit(5)
       .get()
 
-    const stories = storiesSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate().toISOString(),
-      updatedAt: doc.data().updatedAt?.toDate().toISOString(),
-    }))
+    // JavaScriptでソート（isFeatured優先、次にcreatedAt降順）
+    const allStories = storiesSnapshot.docs.map(doc => {
+      const data = doc.data() as any
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate().toISOString(),
+        updatedAt: data.updatedAt?.toDate().toISOString(),
+        _createdAt: data.createdAt?.toDate().getTime() || 0,
+        _isFeatured: data.isFeatured ? 1 : 0
+      }
+    })
+
+    allStories.sort((a: any, b: any) => {
+      if (b._isFeatured !== a._isFeatured) {
+        return b._isFeatured - a._isFeatured
+      }
+      return b._createdAt - a._createdAt
+    })
+
+    const stories = allStories.slice(0, 5)
 
     // ShortsToday用の形式に変換（snake_caseに）
-    const formattedShorts = stories.map(story => ({
+    const formattedShorts = stories.map((story: any) => ({
       id: story.id,
       title: story.title,
       body_md: story.content,

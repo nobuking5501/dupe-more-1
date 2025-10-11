@@ -4,13 +4,14 @@ import { FieldValue } from 'firebase-admin/firestore'
 
 export async function GET() {
   try {
+    // Firestoreから公開済みブログを取得（statusフィルターのみ、インデックス不要）
     const postsSnapshot = await adminDb
       .collection('blog_posts')
       .where('status', '==', 'published')
-      .orderBy('publishedAt', 'desc')
       .get()
 
-    const data = postsSnapshot.docs.map(doc => {
+    // JavaScriptでソート（publishedAt降順）
+    const allPosts = postsSnapshot.docs.map(doc => {
       const docData = doc.data() as any
       return {
         id: doc.id,
@@ -18,8 +19,14 @@ export async function GET() {
         createdAt: docData.createdAt?.toDate().toISOString(),
         updatedAt: docData.updatedAt?.toDate().toISOString(),
         publishedAt: docData.publishedAt?.toDate().toISOString(),
+        _publishedAt: docData.publishedAt?.toDate().getTime() || 0
       }
     })
+
+    // publishedAtで降順ソート
+    allPosts.sort((a: any, b: any) => b._publishedAt - a._publishedAt)
+
+    const data = allPosts
 
     // データを既存のフォーマットに変換
     const formattedData = data.map(post => ({

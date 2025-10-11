@@ -1,0 +1,7 @@
+admin-panel/
+*.md
+!README.md
+check-*.js
+test-*.js
+scripts/
+remove-*.js

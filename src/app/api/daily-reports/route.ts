@@ -20,12 +20,15 @@ export async function GET(request: Request) {
     // ここでは単純に全件取得してフィルタリング
     const snapshot = await query.get()
 
-    let reports = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate().toISOString(),
-      updatedAt: doc.data().updatedAt?.toDate().toISOString()
-    }))
+    let reports = snapshot.docs.map(doc => {
+      const docData = doc.data() as any
+      return {
+        id: doc.id,
+        ...docData,
+        createdAt: docData.createdAt?.toDate().toISOString(),
+        updatedAt: docData.updatedAt?.toDate().toISOString()
+      }
+    })
 
     // クライアント側でフィルタリング
     if (startDate) {

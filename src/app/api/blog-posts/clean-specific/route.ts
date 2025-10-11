@@ -36,7 +36,7 @@ export async function POST(request: Request) {
           continue
         }
 
-        const blog = { id: blogDoc.id, ...blogDoc.data() }
+        const blog = { id: blogDoc.id, ...(blogDoc.data() as any) }
 
         console.log(`🤖 清書中: ${blog.title}`)
 

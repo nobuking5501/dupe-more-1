@@ -23,7 +23,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       )
     }
 
-    const data = docSnap.data()
+    const data = docSnap.data() as any
 
     // 公開済みのみ返す
     if (data?.status !== 'published') {
@@ -80,7 +80,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     })
 
     const updatedDoc = await docRef.get()
-    const updatedData = updatedDoc.data()
+    const updatedData = updatedDoc.data() as any
 
     const formattedData = {
       id: updatedDoc.id,

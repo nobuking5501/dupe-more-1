@@ -31,10 +31,11 @@ export async function GET() {
     // 既存のメッセージがあれば返す
     if (!messagesSnapshot.empty) {
       const doc = messagesSnapshot.docs[0]
+      const docData = doc.data() as any
       const existingMessage = {
         id: doc.id,
-        ...doc.data(),
-        generatedAt: doc.data().generatedAt?.toDate().toISOString()
+        ...docData,
+        generatedAt: docData.generatedAt?.toDate().toISOString()
       }
 
       console.log('✅ 既存メッセージ返却')
@@ -120,7 +121,7 @@ async function generateMonthlyMessage(yearMonth: string): Promise<MonthlyMessage
 
     const reports = reportsSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...(doc.data() as any)
     }))
 
     if (reports.length === 0) {

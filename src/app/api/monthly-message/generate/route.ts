@@ -88,8 +88,8 @@ export async function GET() {
 
     const message = !messageSnapshot.empty ? {
       id: messageSnapshot.docs[0].id,
-      ...messageSnapshot.docs[0].data(),
-      generatedAt: messageSnapshot.docs[0].data().generatedAt?.toDate().toISOString()
+      ...(messageSnapshot.docs[0].data() as any),
+      generatedAt: (messageSnapshot.docs[0].data() as any).generatedAt?.toDate().toISOString()
     } : null
 
     return NextResponse.json({
@@ -133,7 +133,7 @@ async function generateMonthlyMessage(yearMonth: string) {
 
     const reports = reportsSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...(doc.data() as any)
     }))
 
     if (reports.length === 0) {

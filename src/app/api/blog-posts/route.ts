@@ -10,13 +10,16 @@ export async function GET() {
       .orderBy('publishedAt', 'desc')
       .get()
 
-    const data = postsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate().toISOString(),
-      updatedAt: doc.data().updatedAt?.toDate().toISOString(),
-      publishedAt: doc.data().publishedAt?.toDate().toISOString(),
-    }))
+    const data = postsSnapshot.docs.map(doc => {
+      const docData = doc.data() as any
+      return {
+        id: doc.id,
+        ...docData,
+        createdAt: docData.createdAt?.toDate().toISOString(),
+        updatedAt: docData.updatedAt?.toDate().toISOString(),
+        publishedAt: docData.publishedAt?.toDate().toISOString(),
+      }
+    })
 
     // データを既存のフォーマットに変換
     const formattedData = data.map(post => ({

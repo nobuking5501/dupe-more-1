@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
     const availableReports = reportsSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...(doc.data() as any)
     }))
 
     if (availableReports.length < 2) {

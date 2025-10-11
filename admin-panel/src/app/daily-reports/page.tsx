@@ -6,15 +6,15 @@ interface DailyReport {
   id: string
   staff_name: string
   report_date: string
-  weather_temperature: string
-  customer_attributes: string
-  visit_reason_purpose: string
-  treatment_details: string
-  customer_before_treatment: string
-  customer_after_treatment: string
-  salon_atmosphere: string
-  insights_innovations: string
-  kanae_personal_thoughts: string
+  weather_temperature?: string
+  customer_attributes?: string
+  visit_reason_purpose?: string
+  treatment_details?: string
+  customer_before_treatment?: string
+  customer_after_treatment?: string
+  salon_atmosphere?: string
+  insights_innovations?: string
+  kanae_personal_thoughts?: string
   created_at: string
 }
 
@@ -73,7 +73,7 @@ export default function DailyReportsPage() {
         } else {
           alert('日報が保存されました！')
         }
-        
+
         setFormData({
           staff_name: 'かなえ',
           report_date: new Date().toISOString().split('T')[0],
@@ -90,7 +90,8 @@ export default function DailyReportsPage() {
         setShowForm(false)
         fetchReports()
       } else {
-        alert('保存に失敗しました。')
+        const errorData = await response.json()
+        alert(errorData.error || '保存に失敗しました。')
       }
     } catch (error) {
       console.error('送信エラー:', error)
@@ -139,14 +140,18 @@ export default function DailyReportsPage() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    1. 日付 *
+                    1. 日付 * （必須：日報の対象日を選択してください）
                   </label>
                   <input
                     type="date"
-                      value={formData.report_date}
+                    value={formData.report_date}
                     onChange={(e) => setFormData({...formData, report_date: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-lg font-semibold"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    ⚠️ 過去の日報を入力する場合は、必ずこの日付を変更してください
+                  </p>
                 </div>
                 
                 <div>
@@ -305,31 +310,33 @@ export default function DailyReportsPage() {
                   onClick={() => setExpandedReport(expandedReport === report.id ? null : report.id)}
                 >
                   <div className="flex justify-between items-center">
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {new Date(report.report_date).toLocaleDateString('ja-JP')}
+                          📅 {new Date(report.report_date).toLocaleDateString('ja-JP', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'short'
+                          })}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {report.staff_name}
+                          担当: {report.staff_name}
                         </div>
                       </div>
                       <div>
+                        <div className="text-xs text-gray-500 mb-1">お客様</div>
+                        <div className="text-sm text-gray-900 font-medium">
+                          {report.customer_attributes || '-'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">天気・気温</div>
                         <div className="text-sm text-gray-700">
-                          {report.customer_attributes}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-gray-600">
-                          {report.weather_temperature.length > 30 
+                          {report.weather_temperature && report.weather_temperature.length > 30
                             ? report.weather_temperature.substring(0, 30) + '...'
-                            : report.weather_temperature
+                            : (report.weather_temperature || '-')
                           }
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500">
-                          登録: {new Date(report.created_at).toLocaleDateString('ja-JP')}
                         </div>
                       </div>
                     </div>
@@ -358,7 +365,7 @@ export default function DailyReportsPage() {
                             3. お客様の来店のきっかけ・目的
                           </h4>
                           <p className="text-sm text-gray-700 bg-white p-3 rounded border">
-                            {report.visit_reason_purpose}
+                            {report.visit_reason_purpose || '-'}
                           </p>
                         </div>
 
@@ -367,7 +374,7 @@ export default function DailyReportsPage() {
                             4. 本日の施術内容
                           </h4>
                           <p className="text-sm text-gray-700 bg-white p-3 rounded border">
-                            {report.treatment_details}
+                            {report.treatment_details || '-'}
                           </p>
                         </div>
 
@@ -376,7 +383,7 @@ export default function DailyReportsPage() {
                             5. 施術前のお客様の様子
                           </h4>
                           <p className="text-sm text-gray-700 bg-white p-3 rounded border">
-                            {report.customer_before_treatment}
+                            {report.customer_before_treatment || '-'}
                           </p>
                         </div>
 
@@ -385,7 +392,7 @@ export default function DailyReportsPage() {
                             6. 施術後のお客様の反応
                           </h4>
                           <p className="text-sm text-gray-700 bg-white p-3 rounded border">
-                            {report.customer_after_treatment}
+                            {report.customer_after_treatment || '-'}
                           </p>
                         </div>
                       </div>
@@ -396,7 +403,7 @@ export default function DailyReportsPage() {
                             7. 今日のサロンの雰囲気や出来事
                           </h4>
                           <p className="text-sm text-gray-700 bg-white p-3 rounded border">
-                            {report.salon_atmosphere}
+                            {report.salon_atmosphere || '-'}
                           </p>
                         </div>
 
@@ -405,7 +412,7 @@ export default function DailyReportsPage() {
                             8. 今日の気づき・工夫
                           </h4>
                           <p className="text-sm text-gray-700 bg-white p-3 rounded border">
-                            {report.insights_innovations}
+                            {report.insights_innovations || '-'}
                           </p>
                         </div>
 
@@ -414,7 +421,7 @@ export default function DailyReportsPage() {
                             9. かなえさんのひと言感想
                           </h4>
                           <p className="text-sm text-gray-700 bg-white p-3 rounded border">
-                            {report.kanae_personal_thoughts}
+                            {report.kanae_personal_thoughts || '-'}
                           </p>
                         </div>
                       </div>

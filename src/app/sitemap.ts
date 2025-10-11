@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next'
-import { ShortsClient } from '@/lib/shorts-client'
+import { adminDb } from '@/lib/firebaseAdmin'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dupe-and-more.com'
@@ -62,19 +62,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ]
 
-  // Dynamic shorts pages - get latest shorts for individual URLs
+  // Dynamic shorts pages - get latest shorts from Firebase
   let shortPages: MetadataRoute.Sitemap = []
-  
+
   try {
-    const { data: shorts } = await ShortsClient.getPublishedShorts()
-    
-    if (shorts && shorts.length > 0) {
-      shortPages = shorts.map((short) => ({
-        url: `${baseUrl}/shorts#${short.id}`,
-        lastModified: short.published_at ? new Date(short.published_at) : new Date(),
-        changeFrequency: 'monthly' as const,
-        priority: 0.5,
-      }))
+    const storiesSnapshot = await adminDb
+      .collection('short_stories')
+      .where('status', '==', 'active')
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get()
+
+    if (!storiesSnapshot.empty) {
+      shortPages = storiesSnapshot.docs.map((doc) => {
+        const data = doc.data()
+        return {
+          url: `${baseUrl}/shorts#${doc.id}`,
+          lastModified: data.createdAt?.toDate() || new Date(),
+          changeFrequency: 'monthly' as const,
+          priority: 0.5,
+        }
+      })
     }
   } catch (error) {
     console.error('Error generating shorts sitemap entries:', error)

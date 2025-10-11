@@ -1,43 +1,36 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase環境変数が設定されていません')
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+import { adminDb } from '@/lib/firebaseAdmin'
 
 export async function GET() {
   try {
-    // Supabaseから最新の小話を取得（is_featured=trueを優先）
-    const { data: stories, error } = await supabase
-      .from('short_stories')
-      .select('*')
-      .eq('status', 'active')
-      .order('is_featured', { ascending: false })
-      .order('created_at', { ascending: false })
+    // Firestoreから最新の小話を取得（isFeatured=trueを優先）
+    const storiesSnapshot = await adminDb
+      .collection('short_stories')
+      .where('status', '==', 'active')
+      .orderBy('isFeatured', 'desc')
+      .orderBy('createdAt', 'desc')
       .limit(5)
+      .get()
 
-    if (error) {
-      console.error('Supabase小話取得エラー:', error)
-      return NextResponse.json({ error: '小話の取得に失敗しました' }, { status: 500 })
-    }
+    const stories = storiesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate().toISOString(),
+      updatedAt: doc.data().updatedAt?.toDate().toISOString(),
+    }))
 
-    // ShortsToday用の形式に変換
+    // ShortsToday用の形式に変換（snake_caseに）
     const formattedShorts = stories.map(story => ({
       id: story.id,
       title: story.title,
       body_md: story.content,
-      tags: [story.emotional_tone],
+      tags: [story.emotionalTone],
       status: 'published',
       pii_risk_score: 0,
-      source_report_ids: [story.source_report_id],
-      created_at: story.created_at,
-      published_at: story.created_at,
-      updated_at: story.updated_at || story.created_at
+      source_report_ids: [story.sourceReportId],
+      created_at: story.createdAt,
+      published_at: story.createdAt,
+      updated_at: story.updatedAt || story.createdAt
     }))
 
     console.log('Admin shorts returned:', formattedShorts.length, 'items')

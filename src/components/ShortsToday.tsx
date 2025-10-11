@@ -1,43 +1,53 @@
 import Link from 'next/link'
-import { ShortsClient, Short } from '@/lib/shorts-client'
 
-// Convert markdown to HTML (simple implementation)
-function markdownToHtml(markdown: string): string {
-  return markdown
-    .replace(/## (.+)/g, '<h2 class="text-xl font-semibold text-gray-900 mb-3 mt-6">$1</h2>')
-    .replace(/### (.+)/g, '<h3 class="text-lg font-semibold text-gray-800 mb-2 mt-4">$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\n\n/g, '</p><p class="text-gray-700 leading-relaxed mb-4">')
-    .replace(/\n/g, '<br>')
+interface Short {
+  id: string
+  title: string
+  body_md: string
+  tags: string[]
+  status: string
+  pii_risk_score: number
+  source_report_ids: string[]
+  created_at: string
+  published_at?: string
+  updated_at: string
 }
-
 
 async function getShortsData(): Promise<{
   latest: Short | null
 }> {
   try {
-    // 直接admin-shorts APIを使用（最新の小話のみ取得）
-    console.log('Fetching latest short from admin-shorts API')
-    const adminResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/admin-shorts`)
-    if (adminResponse.ok) {
-      const adminShorts = await adminResponse.json()
-      console.log('Admin shorts fetched:', adminShorts.length, 'items')
-      
-      if (adminShorts && adminShorts.length > 0) {
+    // Use featured short stories API (already using Firebase)
+    console.log('Fetching latest short from /api/short-stories/featured')
+    const featuredResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/short-stories/featured`, {
+      next: { revalidate: 0 }
+    })
+
+    if (featuredResponse.ok) {
+      const featured = await featuredResponse.json()
+      console.log('Featured short fetched:', featured)
+
+      if (featured && featured.title) {
+        // Convert from featured API format to Short format
         return {
-          latest: adminShorts[0] || null
+          latest: {
+            id: featured.id,
+            title: featured.title,
+            body_md: featured.content,
+            tags: [featured.emotionalTone],
+            status: 'published',
+            pii_risk_score: 0,
+            source_report_ids: [featured.sourceReportId],
+            created_at: featured.createdAt,
+            published_at: featured.createdAt,
+            updated_at: featured.updatedAt || featured.createdAt
+          }
         }
       }
     }
-    
-    // フォールバック: ShortsClient使用（最新の1件のみ）
-    console.log('Fallback to ShortsClient')
-    const { data: shorts } = await ShortsClient.getPublishedShorts(1)
-    
-    return {
-      latest: (shorts && shorts.length > 0) ? shorts[0] : null
-    }
+
+    console.log('No featured short available')
+    return { latest: null }
   } catch (error) {
     console.error('Error fetching latest short:', error)
     return { latest: null }

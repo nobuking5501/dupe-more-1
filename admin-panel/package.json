@@ -8,23 +8,25 @@
     "start": "node node_modules/next/dist/bin/next start -p 3002",
     "lint": "node node_modules/next/dist/bin/next lint",
     "test": "bash tests/run-tests.sh",
-    "test:pipeline": "node tests/e2e/pipeline.test.js"
+    "test:pipeline": "node tests/e2e/pipeline.test.js",
+    "generate:blogs": "node generate-missing-blogs.js"
   },
   "dependencies": {
+    "firebase": "^12.4.0",
+    "firebase-admin": "^13.5.0",
     "next": "14.2.5",
     "react": "^18",
-    "react-dom": "^18",
-    "@supabase/supabase-js": "^2.38.0"
+    "react-dom": "^18"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",
-    "autoprefixer": "^10.0.1"
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { adminDb } from '@/lib/firebaseAdmin'
+import { FieldValue } from 'firebase-admin/firestore'
 
 export async function GET(request: Request) {
   try {
@@ -8,29 +9,34 @@ export async function GET(request: Request) {
     const endDate = searchParams.get('end_date')
     const limit = parseInt(searchParams.get('limit') || '50')
 
-    let query = supabase
-      .from('daily_reports')
-      .select('*')
-      .order('report_date', { ascending: false })
+    console.log('📝 日報取得開始 - 条件:', { startDate, endDate, limit })
+
+    let query = adminDb
+      .collection('daily_reports')
+      .orderBy('reportDate', 'desc')
       .limit(limit)
 
+    // Firestoreでは複数の範囲クエリを使う場合、複合インデックスが必要
+    // ここでは単純に全件取得してフィルタリング
+    const snapshot = await query.get()
+
+    let reports = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate().toISOString(),
+      updatedAt: doc.data().updatedAt?.toDate().toISOString()
+    }))
+
+    // クライアント側でフィルタリング
     if (startDate) {
-      query = query.gte('report_date', startDate)
+      reports = reports.filter((r: any) => r.reportDate >= startDate)
     }
 
     if (endDate) {
-      query = query.lte('report_date', endDate)
+      reports = reports.filter((r: any) => r.reportDate <= endDate)
     }
 
-    const { data: reports, error } = await query
-
-    if (error) {
-      console.error('Error fetching daily reports:', error)
-      return NextResponse.json(
-        { error: '日報の取得に失敗しました' },
-        { status: 500 }
-      )
-    }
+    console.log('✅ 日報取得成功:', reports.length, '件')
 
     return NextResponse.json({
       success: true,
@@ -38,7 +44,7 @@ export async function GET(request: Request) {
     })
 
   } catch (error) {
-    console.error('API Error:', error)
+    console.error('❌ API Error:', error)
     return NextResponse.json(
       { error: '内部サーバーエラー' },
       { status: 500 }
@@ -49,47 +55,65 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    
+
+    console.log('📝 日報作成開始')
+
     const {
-      staff_name,
-      report_date,
-      client_interactions,
-      observations,
-      challenges,
-      successes,
-      improvements,
-      feelings
+      staffName,
+      reportDate,
+      weatherTemperature,
+      customerAttributes,
+      visitReasonPurpose,
+      treatmentDetails,
+      customerBeforeTreatment,
+      customerAfterTreatment,
+      salonAtmosphere,
+      insightsInnovations,
+      kanaePersonalThoughts
     } = body
 
-    if (!staff_name || !report_date) {
+    if (!staffName || !reportDate) {
       return NextResponse.json(
         { error: 'スタッフ名と報告日は必須です' },
         { status: 400 }
       )
     }
 
-    const { data: report, error } = await supabase
-      .from('daily_reports')
-      .insert({
-        staff_name,
-        report_date,
-        client_interactions,
-        observations,
-        challenges,
-        successes,
-        improvements,
-        feelings
-      })
-      .select()
-      .single()
+    const reportRef = adminDb.collection('daily_reports').doc()
+    await reportRef.set({
+      staffName,
+      reportDate,
+      weatherTemperature: weatherTemperature || '',
+      customerAttributes: customerAttributes || '',
+      visitReasonPurpose: visitReasonPurpose || '',
+      treatmentDetails: treatmentDetails || '',
+      customerBeforeTreatment: customerBeforeTreatment || '',
+      customerAfterTreatment: customerAfterTreatment || '',
+      salonAtmosphere: salonAtmosphere || '',
+      insightsInnovations: insightsInnovations || '',
+      kanaePersonalThoughts: kanaePersonalThoughts || '',
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    })
 
-    if (error) {
-      console.error('Error creating daily report:', error)
-      return NextResponse.json(
-        { error: '日報の作成に失敗しました' },
-        { status: 500 }
-      )
+    const report = {
+      id: reportRef.id,
+      staffName,
+      reportDate,
+      weatherTemperature,
+      customerAttributes,
+      visitReasonPurpose,
+      treatmentDetails,
+      customerBeforeTreatment,
+      customerAfterTreatment,
+      salonAtmosphere,
+      insightsInnovations,
+      kanaePersonalThoughts,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }
+
+    console.log('✅ 日報作成成功:', report.id)
 
     return NextResponse.json({
       success: true,
@@ -97,7 +121,7 @@ export async function POST(request: Request) {
     })
 
   } catch (error) {
-    console.error('API Error:', error)
+    console.error('❌ API Error:', error)
     return NextResponse.json(
       { error: '内部サーバーエラー' },
       { status: 500 }

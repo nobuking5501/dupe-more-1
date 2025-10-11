@@ -28,13 +28,13 @@ export default function ConceptPage() {
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center mb-8">
               <span className="text-4xl mr-4">🌱</span>
-              <h2 className="text-3xl font-bold text-gray-800">共感の入り口</h2>
+              <h2 className="text-3xl font-bold text-gray-800">kanaeからのメッセージ</h2>
             </div>
             <div className="space-y-6 text-gray-600 leading-relaxed text-lg">
               <div className="bg-green-50 p-8 rounded-lg border-l-4 border-green-400">
                 <p className="text-xl font-medium text-gray-700">
                   「諦めないでください。私も、13歳の知的障害・自閉症の息子を育てる母親です。<br />
-                  だからこそ、<span className="text-red-600 font-bold">&ldquo;あの気持ち&rdquo;</span>が痛いほどわかります。」
+                  だからこそ、<span className="text-red-600 font-bold">&ldquo;あなたの気持ち&rdquo;</span>が痛いほどわかります。」
                 </p>
               </div>
             </div>
@@ -48,17 +48,17 @@ export default function ConceptPage() {
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center mb-8">
               <span className="text-4xl mr-4">💔</span>
-              <h2 className="text-3xl font-bold text-gray-800">保護者が抱える不安の代弁</h2>
+              <h2 className="text-3xl font-bold text-gray-800">保護者が抱える不安</h2>
             </div>
             <div className="space-y-6">
               <div className="bg-red-50 p-6 rounded-lg">
-                <p className="text-gray-700 font-medium mb-2">「一般のサロンでは断られるかもしれない」</p>
-                <p className="text-gray-700 font-medium mb-2">「暴れてしまったらどうしよう」</p>
-                <p className="text-gray-700 font-medium">「周りの目が怖い」</p>
+                <p className="text-gray-700 font-medium mb-2">「嫌がって施術が受けられないかもしれない」</p>
+                <p className="text-gray-700 font-medium mb-2">「じっとしていられない」</p>
+                <p className="text-gray-700 font-medium">「大きな声をだしてします」...等で</p>
               </div>
               <div className="text-center py-6">
                 <p className="text-xl font-semibold text-gray-700 mb-2">
-                  そう思って、最初から諦めていませんか？
+                  「サロンで断られるかもしれない」とちゅうちょしていませんか？？
                 </p>
                 <p className="text-lg text-gray-600">
                   私も同じように感じていました。
@@ -83,19 +83,15 @@ export default function ConceptPage() {
               </div>
               <div className="bg-white p-8 rounded-lg shadow-lg">
                 <p className="text-lg text-gray-700 mb-6 leading-relaxed">
-                  障害があっても、お子さまの<span className="text-pink-600 font-bold">「きれいになりたい」</span><span className="text-blue-600 font-bold">「ラクになりたい」</span>という気持ちは、他の子と同じです。
+                  脱毛することで<br />
+                  「生理がの時が楽」になったり「ひげ剃り時の痛みが軽減」したり<br />
+                  「むだ毛処理による肌荒れ軽減」等のメリットがあります。
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                  <div className="bg-pink-50 p-6 rounded-lg">
-                    <p className="text-pink-700 font-semibold text-lg mb-2">👧 女の子なら</p>
-                    <p className="text-gray-700">
-                      毛がなくなることで「女の子らしくなれた」と喜びます。
-                    </p>
-                  </div>
-                  <div className="bg-blue-50 p-6 rounded-lg">
-                    <p className="text-blue-700 font-semibold text-lg mb-2">👦 男の子なら</p>
-                    <p className="text-gray-700">
-                      毎朝の自己処理から解放されて「気持ちがラクになった」と笑顔になります。
+                <div className="mt-6">
+                  <div className="bg-blue-50 p-6 rounded-lg text-center">
+                    <p className="text-blue-700 font-semibold text-lg mb-2">当サロンでは</p>
+                    <p className="text-gray-700 text-lg">
+                      障害があっても、一般の方と同じように施術が受けられます。
                     </p>
                   </div>
                 </div>

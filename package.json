@@ -3,22 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node node_modules/next/dist/bin/next dev",
-    "dev:public": "node node_modules/next/dist/bin/next dev -p 3000",
+    "dev": "npx next dev",
+    "dev:public": "npx next dev -p 3000",
     "dev:admin": "cd admin-panel && npm run dev",
-    "build": "node node_modules/next/dist/bin/next build",
-    "build:public": "node node_modules/next/dist/bin/next build",
+    "build": "npx next build",
+    "build:public": "npx next build",
     "build:admin": "cd admin-panel && npm run build",
-    "start": "node node_modules/next/dist/bin/next start",
-    "start:public": "node node_modules/next/dist/bin/next start -p 3000",
+    "start": "npx next start",
+    "start:public": "npx next start -p 3000",
     "start:admin": "cd admin-panel && npm start",
-    "lint": "node node_modules/next/dist/bin/next lint",
-    "lint:public": "node node_modules/next/dist/bin/next lint",
-    "lint:admin": "cd admin-panel && npm run lint"
+    "lint": "npx next lint",
+    "lint:public": "npx next lint",
+    "lint:admin": "cd admin-panel && npm run lint",
+    "migrate:firebase": "node scripts/migrate-to-firebase.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@supabase/supabase-js": "^2.38.0",
+    "firebase": "^12.4.0",
+    "firebase-admin": "^13.5.0",
     "next": "14.2.5",
     "openai": "^4.0.0",
     "react": "^18",
@@ -29,10 +31,12 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
+    "dotenv": "^17.2.3",
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

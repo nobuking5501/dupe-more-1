@@ -5,21 +5,24 @@ export async function GET() {
   
   try {
     // 環境変数チェック
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const firebaseProjectId = process.env.FIREBASE_PROJECT_ID
+    const firebaseClientEmail = process.env.FIREBASE_CLIENT_EMAIL
+    const firebasePrivateKey = process.env.FIREBASE_PRIVATE_KEY
     const claudeKey = process.env.ANTHROPIC_API_KEY
-    
+
     console.log('環境変数確認:')
-    console.log('- NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅ 設定済み' : '❌ 未設定')
-    console.log('- NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseKey ? '✅ 設定済み' : '❌ 未設定')
+    console.log('- FIREBASE_PROJECT_ID:', firebaseProjectId ? '✅ 設定済み' : '❌ 未設定')
+    console.log('- FIREBASE_CLIENT_EMAIL:', firebaseClientEmail ? '✅ 設定済み' : '❌ 未設定')
+    console.log('- FIREBASE_PRIVATE_KEY:', firebasePrivateKey ? '✅ 設定済み' : '❌ 未設定')
     console.log('- ANTHROPIC_API_KEY:', claudeKey ? '✅ 設定済み' : '❌ 未設定')
-    
+
     const result = {
       status: 'OK',
       timestamp: new Date().toISOString(),
       environment: {
-        supabaseUrl: supabaseUrl ? 'configured' : 'missing',
-        supabaseKey: supabaseKey ? 'configured' : 'missing',
+        firebaseProjectId: firebaseProjectId ? 'configured' : 'missing',
+        firebaseClientEmail: firebaseClientEmail ? 'configured' : 'missing',
+        firebasePrivateKey: firebasePrivateKey ? 'configured' : 'missing',
         claudeKey: claudeKey ? 'configured' : 'missing'
       },
       process: {

@@ -1,21 +1,17 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-// import { // revalidateAfterStoryGeneration } from '@/lib/revalidation'
+import { adminDb } from '@/lib/firebaseAdmin'
+import { FieldValue } from 'firebase-admin/firestore'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase環境変数が設定されていません')
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+console.log('=== 管理画面 Firebase設定確認 ===')
 
 async function logMessage(level: 'info' | 'warn' | 'error', message: string, context: any = {}) {
   try {
-    await supabase
-      .from('agent_logs')
-      .insert([{ level, message, context }])
+    await adminDb.collection('agent_logs').add({
+      level,
+      message,
+      context,
+      createdAt: FieldValue.serverTimestamp()
+    })
   } catch (error) {
     console.error('ログ保存エラー:', error)
   }
@@ -23,10 +19,10 @@ async function logMessage(level: 'info' | 'warn' | 'error', message: string, con
 
 async function generateShortStory(reportData: any) {
   console.log('Claude API小話生成開始 - ID:', reportData.id)
-  
+
   try {
     const CLAUDE_API_KEY = process.env.ANTHROPIC_API_KEY
-    
+
     if (!CLAUDE_API_KEY) {
       throw new Error('Claude API key not found')
     }
@@ -36,16 +32,16 @@ async function generateShortStory(reportData: any) {
 日報をもとに心温まる「小話」を生成してください。
 
 # 日報データ
-- 日付: ${reportData.report_date}
-- 天気・気温: ${reportData.weather_temperature}
-- お客様の属性: ${reportData.customer_attributes}
-- 来店のきっかけ・目的: ${reportData.visit_reason_purpose}
-- 施術内容: ${reportData.treatment_details}
-- 施術前のお客様の様子: ${reportData.customer_before_treatment}
-- 施術後のお客様の反応: ${reportData.customer_after_treatment}
-- サロンの雰囲気: ${reportData.salon_atmosphere}
-- 気づき・工夫: ${reportData.insights_innovations}
-- かなえの感想: ${reportData.kanae_personal_thoughts}
+- 日付: ${reportData.reportDate}
+- 天気・気温: ${reportData.weatherTemperature}
+- お客様の属性: ${reportData.customerAttributes}
+- 来店のきっかけ・目的: ${reportData.visitReasonPurpose}
+- 施術内容: ${reportData.treatmentDetails}
+- 施術前のお客様の様子: ${reportData.customerBeforeTreatment}
+- 施術後のお客様の反応: ${reportData.customerAfterTreatment}
+- サロンの雰囲気: ${reportData.salonAtmosphere}
+- 気づき・工夫: ${reportData.insightsInnovations}
+- かなえの感想: ${reportData.kanaePersonalThoughts}
 
 # 小話の条件
 - 保護者・ご家族に向けた温かいメッセージとして作成
@@ -68,7 +64,7 @@ async function generateShortStory(reportData: any) {
 `
 
     console.log('Claude APIに送信するプロンプト長:', prompt.length, '文字')
-    
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -93,7 +89,7 @@ async function generateShortStory(reportData: any) {
 
     const claudeResponse = await response.json()
     const generatedText = claudeResponse.content[0].text
-    
+
     console.log('Claude API応答受信 - 文字数:', generatedText.length)
 
     // JSONを抽出して解析
@@ -106,7 +102,7 @@ async function generateShortStory(reportData: any) {
           .replace(/[\x00-\x1f\x7f-\x9f]/g, ' ') // 制御文字を空白に置換
           .replace(/\\n/g, '\\n') // 改行文字をエスケープ
           .replace(/\\"/g, '\\"') // ダブルクォートをエスケープ
-        
+
         console.log('Clean JSON:', cleanJson.substring(0, 200) + '...')
         storyData = JSON.parse(cleanJson)
       } else {
@@ -115,9 +111,9 @@ async function generateShortStory(reportData: any) {
     } catch (parseError) {
       console.error('JSON parsing error:', parseError)
       // フォールバック：デフォルトの小話を生成
-      const fallbackContent = `${reportData.weather_temperature}の日、${reportData.customer_attributes}のお客様がご来店されました。${reportData.visit_reason_purpose}ということで、心を込めて${reportData.treatment_details}をさせていただきました。${reportData.customer_after_treatment}お客様の笑顔を見ることができ、私たちも温かい気持ちになりました。`
+      const fallbackContent = `${reportData.weatherTemperature}の日、${reportData.customerAttributes}のお客様がご来店されました。${reportData.visitReasonPurpose}ということで、心を込めて${reportData.treatmentDetails}をさせていただきました。${reportData.customerAfterTreatment}お客様の笑顔を見ることができ、私たちも温かい気持ちになりました。`
       storyData = {
-        title: `心温まる${reportData.report_date}の瞬間`,
+        title: `心温まる${reportData.reportDate}の瞬間`,
         short_version: fallbackContent.substring(0, 200),
         full_version: fallbackContent,
         emotional_tone: 'heartwarming'
@@ -125,20 +121,21 @@ async function generateShortStory(reportData: any) {
     }
 
     return {
-      title: storyData.title || `心温まる${reportData.report_date}の瞬間`,
+      title: storyData.title || `心温まる${reportData.reportDate}の瞬間`,
       content: storyData.full_version || storyData.content,
-      source_report_id: reportData.id,
-      report_date: reportData.report_date,
-      weather_info: reportData.weather_temperature,
-      customer_type: reportData.customer_attributes,
-      key_moment: reportData.customer_after_treatment,
-      emotional_tone: storyData.emotional_tone || 'heartwarming',
+      sourceReportId: reportData.id,
+      reportDate: reportData.reportDate,
+      weatherInfo: reportData.weatherTemperature,
+      customerType: reportData.customerAttributes,
+      keyMoment: reportData.customerAfterTreatment,
+      emotionalTone: storyData.emotional_tone || 'heartwarming',
       status: 'active',
-      is_featured: false // 複数生成時はis_featured=false
+      isFeatured: false // 複数生成時はisFeatured=false
     }
   } catch (error) {
     console.error('小話生成エラー:', error)
-    await logMessage('error', '小話生成に失敗しました', { error: error instanceof Error ? error instanceof Error ? error.message : "Unknown error" : "Unknown error", reportId: reportData.id })
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    await logMessage('error', '小話生成に失敗しました', { error: errorMessage, reportId: reportData.id })
     throw error
   }
 }
@@ -149,41 +146,40 @@ export async function POST(request: Request) {
     await logMessage('info', '複数小話生成開始')
 
     // 全日報を取得
-    const { data: allReports, error: reportsError } = await supabase
-      .from('daily_reports')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const allReportsSnapshot = await adminDb
+      .collection('daily_reports')
+      .orderBy('createdAt', 'desc')
+      .get()
 
-    if (reportsError) {
-      console.error('❌ 日報取得エラー:', reportsError)
-      return NextResponse.json({ error: '日報の取得に失敗しました' }, { status: 500 })
-    }
+    const allReports = allReportsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
 
     // 既存の小話の日報IDを取得
-    const { data: existingStories, error: storiesError } = await supabase
-      .from('short_stories')
-      .select('source_report_id')
+    const existingStoriesSnapshot = await adminDb
+      .collection('short_stories')
+      .get()
 
-    if (storiesError) {
-      console.error('❌ 小話取得エラー:', storiesError)
-      return NextResponse.json({ error: '既存小話の取得に失敗しました' }, { status: 500 })
-    }
-
-    const existingReportIds = new Set(existingStories.map(story => story.source_report_id))
+    const existingReportIds = new Set(
+      existingStoriesSnapshot.docs
+        .map(doc => doc.data().sourceReportId)
+        .filter(id => id) // undefined除外
+    )
 
     // 小話が生成されていない有効な日報を特定
-    const missingReports = allReports.filter(report => {
-      return !existingReportIds.has(report.id) && 
-             report.customer_attributes && 
-             report.customer_attributes.trim() !== ''
+    const missingReports = allReports.filter((report: any) => {
+      return !existingReportIds.has(report.id) &&
+        report.customerAttributes &&
+        report.customerAttributes.trim() !== ''
     })
 
     console.log('📊 生成対象レポート:', missingReports.length, '件')
 
     if (missingReports.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: 'すべての有効な日報に対して小話が既に生成されています',
-        generated: 0 
+        generated: 0
       })
     }
 
@@ -194,34 +190,30 @@ export async function POST(request: Request) {
     // 各日報から小話を生成
     for (const report of missingReports) {
       try {
-        console.log('🤖 小話生成中:', report.id, '(', report.customer_attributes, ')')
+        console.log('🤖 小話生成中:', report.id, '(', report.customerAttributes, ')')
         const storyData = await generateShortStory(report)
-        
-        // Supabaseに保存（同じ日付でもIDが違えば保存可能）
-        const { data: newStory, error: insertError } = await supabase
-          .from('short_stories')
-          .insert([storyData])
-          .select()
-          .single()
 
-        if (insertError) {
-          console.error('❌ 小話保存エラー:', insertError)
-          errorCount++
-          results.push({
-            reportId: report.id,
-            status: 'error',
-            error: insertError?.message || "Unknown error"
-          })
-        } else {
-          console.log('✅ 小話生成・保存完了:', newStory.id)
-          successCount++
-          results.push({
-            reportId: report.id,
-            storyId: newStory.id,
-            title: newStory.title,
-            status: 'success'
-          })
+        // Firestoreに保存
+        const storyRef = adminDb.collection('short_stories').doc()
+        await storyRef.set({
+          ...storyData,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
+        })
+
+        const newStory = {
+          id: storyRef.id,
+          ...storyData
         }
+
+        console.log('✅ 小話生成・保存完了:', newStory.id)
+        successCount++
+        results.push({
+          reportId: report.id,
+          storyId: newStory.id,
+          title: newStory.title,
+          status: 'success'
+        })
 
         // API制限を避けるため少し待機
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -229,10 +221,11 @@ export async function POST(request: Request) {
       } catch (error) {
         console.error('❌ 小話生成エラー:', error)
         errorCount++
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
         results.push({
           reportId: report.id,
           status: 'error',
-          error: error instanceof Error ? error instanceof Error ? error.message : "Unknown error" : "Unknown error"
+          error: errorMessage
         })
       }
     }
@@ -254,7 +247,8 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('複数小話生成エラー:', error)
-    await logMessage('error', '複数小話生成に失敗しました', { error: error instanceof Error ? error instanceof Error ? error.message : "Unknown error" : "Unknown error" })
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    await logMessage('error', '複数小話生成に失敗しました', { error: errorMessage })
     return NextResponse.json({ error: '複数小話の生成に失敗しました' }, { status: 500 })
   }
 }

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { SupabaseService } from '@/lib/supabase-client'
+import { FirebaseService } from '@/lib/firebase-client'
 import { formatDate } from '@/lib/utils'
 
 interface BlogPostPageProps {
@@ -11,13 +11,13 @@ interface BlogPostPageProps {
 
 async function getBlogPost(slugOrId: string) {
   // Try to get by slug first, then by ID
-  let result = await SupabaseService.getBlogPostBySlug(slugOrId)
-  
+  let result = await FirebaseService.getBlogPostBySlug(slugOrId)
+
   if (result.error || !result.data) {
     // If slug fails, try by ID (backward compatibility)
-    result = await SupabaseService.getBlogPost(slugOrId)
+    result = await FirebaseService.getBlogPost(slugOrId)
   }
-  
+
   if (result.error || !result.data) {
     return null
   }

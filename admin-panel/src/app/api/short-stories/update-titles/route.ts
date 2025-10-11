@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { adminDb } from '@/lib/firebaseAdmin'
+import { FieldValue } from 'firebase-admin/firestore'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase環境変数が設定されていません')
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+console.log('=== 管理画面 Firebase設定確認 ===')
 
 async function generateUniqueTitle(storyData: any) {
   try {
     const CLAUDE_API_KEY = process.env.ANTHROPIC_API_KEY
-    
+
     if (!CLAUDE_API_KEY) {
       throw new Error('Claude API key not found')
     }
@@ -24,9 +18,9 @@ async function generateUniqueTitle(storyData: any) {
 # 小話データ
 - 現在のタイトル: ${storyData.title}
 - 内容の一部: ${storyData.content.substring(0, 200)}...
-- お客様属性: ${storyData.customer_type}
-- 印象的な瞬間: ${storyData.key_moment}
-- 感情トーン: ${storyData.emotional_tone}
+- お客様属性: ${storyData.customerType}
+- 印象的な瞬間: ${storyData.keyMoment}
+- 感情トーン: ${storyData.emotionalTone}
 
 # タイトルの条件
 - 20文字以内で簡潔に
@@ -43,7 +37,7 @@ async function generateUniqueTitle(storyData: any) {
 `
 
     console.log('Claude APIに新タイトル生成リクエスト送信')
-    
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -68,7 +62,7 @@ async function generateUniqueTitle(storyData: any) {
 
     const claudeResponse = await response.json()
     const generatedText = claudeResponse.content[0].text
-    
+
     // JSONを抽出して解析
     try {
       const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
@@ -77,18 +71,18 @@ async function generateUniqueTitle(storyData: any) {
           .replace(/[\x00-\x1f\x7f-\x9f]/g, ' ')
           .replace(/\\n/g, '\\n')
           .replace(/\\"/g, '\\"')
-        
+
         const titleData = JSON.parse(cleanJson)
-        return titleData.new_title || `${storyData.customer_type}の特別な時間`
+        return titleData.new_title || `${storyData.customerType}の特別な時間`
       } else {
         throw new Error('JSON not found in response')
       }
     } catch (parseError) {
       console.error('JSON parsing error:', parseError)
       // フォールバック：お客様属性に基づいたタイトル
-      if (storyData.customer_type.includes('男性')) {
+      if (storyData.customerType && storyData.customerType.includes('男性')) {
         return '勇気ある一歩の物語'
-      } else if (storyData.customer_type.includes('女性')) {
+      } else if (storyData.customerType && storyData.customerType.includes('女性')) {
         return '笑顔が輝いた瞬間'
       } else {
         return '心に響く特別な時間'
@@ -96,7 +90,7 @@ async function generateUniqueTitle(storyData: any) {
     }
   } catch (error) {
     console.error('タイトル生成エラー:', error)
-    return `特別な${storyData.report_date.split('-')[2]}日の物語`
+    return `特別な${storyData.reportDate.split('-')[2]}日の物語`
   }
 }
 
@@ -105,22 +99,23 @@ export async function POST(request: Request) {
     console.log('📝 小話タイトル更新リクエスト受信')
 
     // 「○○の心温まる時間」パターンの小話を取得
-    const { data: genericStories, error: fetchError } = await supabase
-      .from('short_stories')
-      .select('*')
-      .like('title', '%の心温まる時間')
+    const storiesSnapshot = await adminDb
+      .collection('short_stories')
+      .get()
 
-    if (fetchError) {
-      console.error('❌ 小話取得エラー:', fetchError)
-      return NextResponse.json({ error: '小話の取得に失敗しました' }, { status: 500 })
-    }
+    const genericStories = storiesSnapshot.docs
+      .map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      .filter(story => story.title && story.title.includes('の心温まる時間'))
 
     console.log('📊 更新対象の小話:', genericStories.length, '件')
 
     if (genericStories.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: '更新対象の小話が見つかりませんでした',
-        updated: 0 
+        updated: 0
       })
     }
 
@@ -133,32 +128,24 @@ export async function POST(request: Request) {
       try {
         console.log('🎯 タイトル生成中:', story.title)
         const newTitle = await generateUniqueTitle(story)
-        
-        // データベースのタイトルを更新
-        const { error: updateError } = await supabase
-          .from('short_stories')
-          .update({ title: newTitle })
-          .eq('id', story.id)
 
-        if (updateError) {
-          console.error('❌ タイトル更新エラー:', updateError)
-          errorCount++
-          results.push({
-            storyId: story.id,
-            oldTitle: story.title,
-            status: 'error',
-            error: updateError.message
+        // データベースのタイトルを更新
+        await adminDb
+          .collection('short_stories')
+          .doc(story.id)
+          .update({
+            title: newTitle,
+            updatedAt: FieldValue.serverTimestamp()
           })
-        } else {
-          console.log('✅ タイトル更新完了:', story.title, '->', newTitle)
-          successCount++
-          results.push({
-            storyId: story.id,
-            oldTitle: story.title,
-            newTitle: newTitle,
-            status: 'success'
-          })
-        }
+
+        console.log('✅ タイトル更新完了:', story.title, '->', newTitle)
+        successCount++
+        results.push({
+          storyId: story.id,
+          oldTitle: story.title,
+          newTitle: newTitle,
+          status: 'success'
+        })
 
         // API制限を避けるため少し待機
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -170,7 +157,7 @@ export async function POST(request: Request) {
           storyId: story.id,
           oldTitle: story.title,
           status: 'error',
-          error: error instanceof Error ? error.message : "Unknown error"
+          error: error instanceof Error ? error.message : 'Unknown error'
         })
       }
     }

@@ -1,81 +1,20 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-// import { // getPreviousBusinessDay, // formatDateString } from '@/lib/business-days'
-// import { // revalidateAfterStoryGeneration, // revalidateAfterBlogGeneration } from '@/lib/revalidation'
+import { adminDb } from '@/lib/firebaseAdmin'
+import { Timestamp, FieldValue } from 'firebase-admin/firestore'
+import { callClaudeGenerateAPI } from '@/lib/claude-generate'
+import { callClaudeCleanAPI } from '@/lib/claude-clean'
 
-// Supabaseクライアント設定
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-console.log('=== 管理画面 Supabase設定確認 ===')
-console.log('URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'なし')
-console.log('KEY:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 30)}...` : 'なし')
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Supabase環境変数が見つかりません')
-  console.error('必要な環境変数:')
-  console.error('- NEXT_PUBLIC_SUPABASE_URL')
-  console.error('- NEXT_PUBLIC_SUPABASE_ANON_KEY')
-  throw new Error('Supabase環境変数が設定されていません')
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
-console.log('✅ Supabaseクライアント初期化完了')
-
-export async function GET() {
-  try {
-    console.log('📥 日報データをSupabaseから取得中...')
-    
-    // まず接続テスト
-    const { data: testData, error: testError } = await supabase
-      .from('daily_reports')
-      .select('count')
-      .limit(1)
-
-    if (testError) {
-      console.error('❌ Supabase接続テスト失敗:', testError)
-      return NextResponse.json(
-        { error: `データベース接続エラー: ${testError.message}` }, 
-        { status: 500 }
-      )
-    }
-
-    console.log('✅ Supabase接続テスト成功')
-
-    // 実際のデータ取得
-    const { data: reports, error } = await supabase
-      .from('daily_reports')
-      .select('*')
-      .order('report_date', { ascending: false })
-
-    if (error) {
-      console.error('❌ 日報取得エラー:', error)
-      return NextResponse.json(
-        { error: `日報取得失敗: ${error instanceof Error ? error.message : "Unknown error"}` }, 
-        { status: 500 }
-      )
-    }
-
-    console.log('✅ 日報取得成功:', reports?.length || 0, '件')
-    return NextResponse.json(reports || [])
-  } catch (error) {
-    console.error('❌ 予期しないエラー:', error)
-    return NextResponse.json(
-      { error: '予期しないエラーが発生しました' }, 
-      { status: 500 }
-    )
-  }
-}
+console.log('=== 管理画面 Firebase設定確認 ===')
 
 // Claude APIを使用して小話を生成する関数
 async function generateShortStory(reportData: any) {
-  console.log('Claude API小話生成開始 - 日付:', reportData.report_date)
-  
+  console.log('Claude API小話生成開始 - 日付:', reportData.reportDate)
+
   try {
     const CLAUDE_API_KEY = process.env.ANTHROPIC_API_KEY
-    
+
     console.log('Claude APIキー確認:', CLAUDE_API_KEY ? 'あり' : 'なし')
-    
+
     if (!CLAUDE_API_KEY) {
       console.error('Claude API key not found')
       return null
@@ -87,16 +26,16 @@ async function generateShortStory(reportData: any) {
 あなたは障害者専門脱毛サロン「Dupe&more」のスタッフ「かなえ」として、日報を元に保護者の方々の心に寄り添う「小話」を生成してください。
 
 # 日報データ
-- 日付: ${reportData.report_date}
-- 天気・気温: ${reportData.weather_temperature}
-- お客様の属性: ${reportData.customer_attributes}
-- 来店のきっかけ・目的: ${reportData.visit_reason_purpose}
-- 施術内容: ${reportData.treatment_details}
-- 施術前のお客様の様子: ${reportData.customer_before_treatment}
-- 施術後のお客様の反応: ${reportData.customer_after_treatment}
-- サロンの雰囲気: ${reportData.salon_atmosphere}
-- 気づき・工夫: ${reportData.insights_innovations}
-- かなえの感想: ${reportData.kanae_personal_thoughts}
+- 日付: ${reportData.reportDate}
+- 天気・気温: ${reportData.weatherTemperature}
+- お客様の属性: ${reportData.customerAttributes}
+- 来店のきっかけ・目的: ${reportData.visitReasonPurpose}
+- 施術内容: ${reportData.treatmentDetails}
+- 施術前のお客様の様子: ${reportData.customerBeforeTreatment}
+- 施術後のお客様の反応: ${reportData.customerAfterTreatment}
+- サロンの雰囲気: ${reportData.salonAtmosphere}
+- 気づき・工夫: ${reportData.insightsInnovations}
+- かなえの感想: ${reportData.kanaePersonalThoughts}
 
 # 小話作成のガイドライン
 
@@ -140,7 +79,7 @@ async function generateShortStory(reportData: any) {
 `
 
     console.log('Claude APIに送信するプロンプト長:', prompt.length, '文字')
-    
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -168,7 +107,7 @@ async function generateShortStory(reportData: any) {
 
     const claudeResponse = await response.json()
     const generatedText = claudeResponse.content[0].text
-    
+
     console.log('Claude API応答受信 - 文字数:', generatedText.length)
 
     // JSONを抽出して解析
@@ -183,20 +122,20 @@ async function generateShortStory(reportData: any) {
     } catch (parseError) {
       console.error('JSON parsing error:', parseError)
       console.error('Generated text:', generatedText?.substring(0, 500) + '...')
-      
+
       // 感動的なフォールバック小話を生成
       const createHeartwarming = (data: any) => {
-        if (data.customer_after_treatment && data.customer_before_treatment) {
-          return `${data.weather_temperature || '穏やかな'}日、当サロンに${data.customer_attributes || 'あるお客様'}がいらっしゃいました。${data.customer_before_treatment || '最初は少し緊張されていましたが'}、施術を進めていくうちに、${data.customer_after_treatment || '安心した表情を見せてくださいました'}。\n\nそんな瞬間に立ち会えることは、私たちスタッフにとって何よりの喜びです。${data.kanae_personal_thoughts || 'お客様との信頼関係を大切に、今日も温かい時間を過ごすことができました'}。`
+        if (data.customerAfterTreatment && data.customerBeforeTreatment) {
+          return `${data.weatherTemperature || '穏やかな'}日、当サロンに${data.customerAttributes || 'あるお客様'}がいらっしゃいました。${data.customerBeforeTreatment || '最初は少し緊張されていましたが'}、施術を進めていくうちに、${data.customerAfterTreatment || '安心した表情を見せてくださいました'}。\n\nそんな瞬間に立ち会えることは、私たちスタッフにとって何よりの喜びです。${data.kanaePersonalThoughts || 'お客様との信頼関係を大切に、今日も温かい時間を過ごすことができました'}。`
         } else {
-          return `${data.weather_temperature || '心地よい'}日、サロンには温かな時間が流れていました。${data.customer_attributes || 'お客様'}との出会いは、私たちにとって特別な瞬間です。\n\n一人ひとりのペースに寄り添いながら、安心してお過ごしいただけるよう心がけています。${data.kanae_personal_thoughts || '今日もお客様の笑顔に出会えて、幸せな気持ちでいっぱいです'}。`
+          return `${data.weatherTemperature || '心地よい'}日、サロンには温かな時間が流れていました。${data.customerAttributes || 'お客様'}との出会いは、私たちにとって特別な瞬間です。\n\n一人ひとりのペースに寄り添いながら、安心してお過ごしいただけるよう心がけています。${data.kanaePersonalThoughts || '今日もお客様の笑顔に出会えて、幸せな気持ちでいっぱいです'}。`
         }
       }
-      
+
       storyData = {
-        title: reportData.customer_after_treatment?.includes('笑顔') ? '笑顔が繋ぐ温かい時間' : 
-               reportData.customer_after_treatment?.includes('安心') ? '安心して過ごした一日' : 
-               reportData.customer_before_treatment?.includes('緊張') ? '緊張から安心への変化' : 
+        title: reportData.customerAfterTreatment?.includes('笑顔') ? '笑顔が繋ぐ温かい時間' :
+               reportData.customerAfterTreatment?.includes('安心') ? '安心して過ごした一日' :
+               reportData.customerBeforeTreatment?.includes('緊張') ? '緊張から安心への変化' :
                '心温まるサロンの時間',
         content: createHeartwarming(reportData),
         emotional_tone: 'heartwarming'
@@ -204,19 +143,18 @@ async function generateShortStory(reportData: any) {
     }
 
     const shortStory = {
-      id: `story-${Date.now()}`,
-      title: storyData.title || `${new Date(reportData.report_date).toLocaleDateString('ja-JP')}の心温まる時間`,
+      title: storyData.title || `${new Date(reportData.reportDate).toLocaleDateString('ja-JP')}の心温まる時間`,
       content: storyData.content,
-      source_report_id: reportData.id,
-      report_date: reportData.report_date,
-      weather_info: reportData.weather_temperature,
-      customer_type: reportData.customer_attributes,
-      key_moment: reportData.customer_after_treatment,
-      emotional_tone: storyData.emotional_tone || 'heartwarming',
+      sourceReportId: reportData.id,
+      reportDate: reportData.reportDate,
+      weatherInfo: reportData.weatherTemperature,
+      customerType: reportData.customerAttributes,
+      keyMoment: reportData.customerAfterTreatment,
+      emotionalTone: storyData.emotional_tone || 'heartwarming',
       status: 'active',
-      is_featured: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      isFeatured: true,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
     }
 
     console.log('Generated short story:', shortStory.title)
@@ -225,189 +163,295 @@ async function generateShortStory(reportData: any) {
     console.error('小話生成エラー:', error)
     // エラー時のフォールバック小話
     return {
-      id: `story-${Date.now()}`,
-      title: `${new Date(reportData.report_date).toLocaleDateString('ja-JP')}のサロンより`,
-      content: `本日も温かいお客様との出会いがありました。${reportData.customer_attributes}のお客様が${reportData.visit_reason_purpose}ということでご来店され、心を込めて施術させていただきました。お客様の笑顔を見ることができ、私たちスタッフも幸せな気持ちになりました。`,
-      source_report_id: reportData.id,
-      report_date: reportData.report_date,
-      weather_info: reportData.weather_temperature,
-      customer_type: reportData.customer_attributes,
-      key_moment: reportData.customer_after_treatment,
-      emotional_tone: 'heartwarming',
+      title: `${new Date(reportData.reportDate).toLocaleDateString('ja-JP')}のサロンより`,
+      content: `本日も温かいお客様との出会いがありました。${reportData.customerAttributes}のお客様が${reportData.visitReasonPurpose}ということでご来店され、心を込めて施術させていただきました。お客様の笑顔を見ることができ、私たちスタッフも幸せな気持ちになりました。`,
+      sourceReportId: reportData.id,
+      reportDate: reportData.reportDate,
+      weatherInfo: reportData.weatherTemperature,
+      customerType: reportData.customerAttributes,
+      keyMoment: reportData.customerAfterTreatment,
+      emotionalTone: 'heartwarming',
       status: 'active',
-      is_featured: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      isFeatured: true,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
     }
+  }
+}
+
+// 2つの日報からブログを自動生成する関数
+async function autoGenerateBlog() {
+  try {
+    console.log('📰 ブログ自動生成チェック開始...')
+
+    // すべての日報を取得（日付降順）
+    const allReportsSnapshot = await adminDb
+      .collection('daily_reports')
+      .orderBy('reportDate', 'desc')
+      .get()
+
+    const allReports = allReportsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
+    console.log(`📊 利用可能な日報: ${allReports.length}件`)
+
+    if (allReports.length < 2) {
+      console.log('⏸️  日報が2件未満のため、ブログ生成をスキップ')
+      return null
+    }
+
+    // 既存のブログで使用済みの日付を取得
+    const existingBlogsSnapshot = await adminDb
+      .collection('blog_posts')
+      .get()
+
+    const usedDates = new Set<string>()
+    existingBlogsSnapshot.docs.forEach(doc => {
+      const data = doc.data()
+      if (data.newerDate) usedDates.add(data.newerDate)
+      if (data.olderDate) usedDates.add(data.olderDate)
+    })
+
+    console.log(`📅 使用済み日付: ${usedDates.size}件`)
+
+    // 未使用の日報を抽出
+    const unusedReports = allReports.filter((report: any) =>
+      !usedDates.has(report.reportDate) &&
+      report.customerAttributes &&
+      report.customerAttributes.trim() !== ''
+    )
+
+    console.log(`✅ 未使用の日報: ${unusedReports.length}件`)
+
+    if (unusedReports.length < 2) {
+      console.log('⏸️  未使用日報が2件未満のため、ブログ生成をスキップ')
+      return null
+    }
+
+    // 最新の2件を取得
+    const newerReport = unusedReports[0]
+    const olderReport = unusedReports[1]
+
+    console.log(`🤖 ブログ生成開始: ${newerReport.reportDate} と ${olderReport.reportDate}`)
+
+    // Claude APIでブログ生成
+    const reportPair = {
+      newer: newerReport,
+      older: olderReport
+    }
+
+    const generatedBlog = await callClaudeGenerateAPI(reportPair)
+    console.log('✅ ブログ生成完了:', generatedBlog.title)
+
+    // Claude APIで清書
+    console.log('🎨 清書開始...')
+    const cleanedBody = await callClaudeCleanAPI(generatedBlog.body)
+    console.log('✅ 清書完了')
+
+    // ブログをFirestoreに保存
+    const generateSlug = (title: string): string => {
+      return title
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 50)
+    }
+
+    const blogRef = adminDb.collection('blog_posts').doc()
+    await blogRef.set({
+      title: generatedBlog.title,
+      slug: generateSlug(generatedBlog.title),
+      summary: generatedBlog.summary,
+      content: cleanedBody,
+      newerDate: newerReport.reportDate,
+      olderDate: olderReport.reportDate,
+      status: 'published',
+      publishedAt: FieldValue.serverTimestamp(),
+      authorId: null,
+      originalReportId: newerReport.id,
+      tags: ['日報', '脱毛', '障害者専門'],
+      excerpt: generatedBlog.summary,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    })
+
+    const newBlog = {
+      id: blogRef.id,
+      title: generatedBlog.title,
+      newerDate: newerReport.reportDate,
+      olderDate: olderReport.reportDate
+    }
+
+    console.log('✅ ブログをFirestoreに保存しました:', newBlog.id)
+
+    return newBlog
+  } catch (error) {
+    console.error('❌ ブログ自動生成エラー:', error)
+    return null
+  }
+}
+
+export async function GET() {
+  try {
+    console.log('📥 日報データをFirestoreから取得中...')
+
+    const reportsSnapshot = await adminDb
+      .collection('daily_reports')
+      .orderBy('reportDate', 'desc')
+      .get()
+
+    // Firebaseのキャメルケースをフロントエンドのスネークケースに変換
+    const reports = reportsSnapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        staff_name: data.staffName,
+        report_date: data.reportDate,
+        weather_temperature: data.weatherTemperature || '',
+        customer_attributes: data.customerAttributes || '',
+        visit_reason_purpose: data.visitReasonPurpose || '',
+        treatment_details: data.treatmentDetails || '',
+        customer_before_treatment: data.customerBeforeTreatment || '',
+        customer_after_treatment: data.customerAfterTreatment || '',
+        salon_atmosphere: data.salonAtmosphere || '',
+        insights_innovations: data.insightsInnovations || '',
+        kanae_personal_thoughts: data.kanaePersonalThoughts || '',
+        created_at: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+        updated_at: data.updatedAt?.toDate().toISOString() || new Date().toISOString(),
+      }
+    })
+
+    console.log('✅ 日報取得成功:', reports.length, '件')
+    return NextResponse.json(reports)
+  } catch (error) {
+    console.error('❌ 予期しないエラー:', error)
+    return NextResponse.json(
+      { error: '予期しないエラーが発生しました' },
+      { status: 500 }
+    )
   }
 }
 
 export async function POST(request: Request) {
   try {
     const data = await request.json()
-    
+
     console.log('📝 日報データを受信:', {
       staff_name: data.staff_name,
       report_date: data.report_date,
       weather_temperature: data.weather_temperature?.substring(0, 50) + '...'
     })
-    
+
     // 入力データ検証（最小限の必須項目のみ）
     if (!data.staff_name || !data.report_date) {
       console.error('❌ 必須項目が不足しています')
       return NextResponse.json(
-        { error: 'スタッフ名と報告日は必須です' }, 
+        { error: 'スタッフ名と報告日は必須です' },
         { status: 400 }
       )
     }
 
-    // 1日複数件の日報を許可するため、重複チェックを削除
-    // 各項目は空欄でも保存可能に変更
+    // 同じ日付の日報が既に存在するかチェック
+    const existingReports = await adminDb
+      .collection('daily_reports')
+      .where('reportDate', '==', data.report_date)
+      .get()
 
-    console.log('💾 Supabaseに日報を保存中...')
-    
-    // Supabaseに日報を保存
-    const { data: newReport, error: insertError } = await supabase
-      .from('daily_reports')
-      .insert([{
-        staff_name: data.staff_name,
-        report_date: data.report_date,
-        weather_temperature: data.weather_temperature,
-        customer_attributes: data.customer_attributes,
-        visit_reason_purpose: data.visit_reason_purpose,
-        treatment_details: data.treatment_details,
-        customer_before_treatment: data.customer_before_treatment,
-        customer_after_treatment: data.customer_after_treatment,
-        salon_atmosphere: data.salon_atmosphere,
-        insights_innovations: data.insights_innovations,
-        kanae_personal_thoughts: data.kanae_personal_thoughts
-      }])
-      .select()
-      .single()
-
-    if (insertError) {
-      console.error('❌ Supabase日報保存エラー:', insertError)
+    if (!existingReports.empty) {
+      console.log('⚠️ 同じ日付の日報が既に存在します:', data.report_date)
       return NextResponse.json(
-        { error: `日報保存失敗: ${insertError?.message || "Unknown error"}` }, 
-        { status: 500 }
+        { error: `${data.report_date}の日報は既に登録されています。同じ日付の日報は1日1件までです。` },
+        { status: 400 }
       )
     }
 
-    console.log('✅ 日報をSupabaseに保存しました:', newReport.id)
-    
+    console.log('💾 Firestoreに日報を保存中...')
+
+    // Firestoreに日報を保存（キャメルケースに変換）
+    const reportRef = adminDb.collection('daily_reports').doc()
+    const reportData = {
+      staffName: data.staff_name,
+      reportDate: data.report_date,
+      weatherTemperature: data.weather_temperature,
+      customerAttributes: data.customer_attributes,
+      visitReasonPurpose: data.visit_reason_purpose,
+      treatmentDetails: data.treatment_details,
+      customerBeforeTreatment: data.customer_before_treatment,
+      customerAfterTreatment: data.customer_after_treatment,
+      salonAtmosphere: data.salon_atmosphere,
+      insightsInnovations: data.insights_innovations,
+      kanaePersonalThoughts: data.kanae_personal_thoughts,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    }
+
+    await reportRef.set(reportData)
+
+    const newReport = {
+      id: reportRef.id,
+      ...reportData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+
+    console.log('✅ 日報をFirestoreに保存しました:', newReport.id)
+
     // 日報投稿後に小話を自動生成
     console.log('小話生成を開始します...')
     const generatedStory = await generateShortStory(newReport)
-    
+
     if (generatedStory) {
       console.log('小話生成成功:', generatedStory.title)
     } else {
       console.log('小話生成失敗')
     }
-    
-    // 生成された小話をSupabaseに保存
+
+    // 生成された小話をFirestoreに保存
     if (generatedStory) {
-      console.log('💾 小話をSupabaseに保存中...')
-      
+      console.log('💾 小話をFirestoreに保存中...')
+
       try {
-        // 既存の小話のis_featuredをfalseに更新
-        const { error: updateError } = await supabase
-          .from('short_stories')
-          .update({ is_featured: false })
-          .neq('id', 'dummy')
+        // 既存の小話のisFeaturedをfalseに更新
+        const storiesSnapshot = await adminDb
+          .collection('short_stories')
+          .where('isFeatured', '==', true)
+          .get()
 
-        if (updateError) {
-          console.log('⚠️ 既存小話のフィーチャー更新エラー:', updateError.message)
-        } else {
-          console.log('✅ 既存小話のフィーチャーフラグを更新しました')
-        }
+        const batch = adminDb.batch()
+        storiesSnapshot.docs.forEach(doc => {
+          batch.update(doc.ref, { isFeatured: false })
+        })
 
-        // 新しい小話をSupabaseに保存
-        const { data: savedStory, error: storyError } = await supabase
-          .from('short_stories')
-          .insert([{
-            title: generatedStory.title,
-            content: generatedStory.content,
-            source_report_id: generatedStory.source_report_id,
-            emotional_tone: generatedStory.emotional_tone,
-            is_featured: true,
-            status: 'active',
-            report_date: generatedStory.report_date,
-            weather_info: generatedStory.weather_info,
-            customer_type: generatedStory.customer_type,
-            key_moment: generatedStory.key_moment
-          }])
-          .select()
-          .single()
+        // 新しい小話を追加
+        const storyRef = adminDb.collection('short_stories').doc()
+        batch.set(storyRef, generatedStory)
 
-        if (storyError) {
-          console.error('❌ Supabase小話保存エラー:', storyError)
-          // 小話保存に失敗しても日報は保存されているので処理を続行
-        } else {
-          console.log('✅ 小話をSupabaseに保存しました:', savedStory.id)
-          
-          // 小話生成後に公開サイトを更新
-          console.log('🔄 公開サイトの更新を開始...')
-          // await revalidateAfterStoryGeneration()
-        }
+        await batch.commit()
 
+        console.log('✅ 小話をFirestoreに保存しました:', storyRef.id)
       } catch (saveError) {
         console.error('❌ 小話保存中に予期しないエラー:', saveError)
       }
     }
-    
-    // 小話生成が成功した場合、ブログ生成をトリガー
-    let blogResult = null
-    if (generatedStory) {
-      try {
-        console.log('📊 ブログ生成の可否をチェック中...')
-        
-        // 前営業日を計算
-        // const previousBusinessDay = getPreviousBusinessDay(new Date(newReport.report_date))
-        // const previousDateString = formatDateString(previousBusinessDay)
-        const previousDateString = new Date(newReport.report_date).toISOString().split('T')[0]
-        
-        // 前営業日の小話が存在するかチェック
-        const { data: previousStory, error: prevStoryError } = await supabase
-          .from('short_stories')
-          .select('id, title')
-          .eq('report_date', previousDateString)
-          .single()
 
-        if (previousStory) {
-          console.log('✅ 前営業日の小話が存在します。ブログ生成を開始します...')
-          
-          // ブログ生成APIを内部呼び出し
-          const blogResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3002'}/api/blog-posts/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date: newReport.report_date })
-          })
-          
-          if (blogResponse.ok) {
-            blogResult = await blogResponse.json()
-            console.log('✅ ブログ自動生成成功:', blogResult.title)
-            
-            // ブログ生成後に公開サイトを更新
-            console.log('🔄 ブログ生成後の公開サイト更新...')
-            // await revalidateAfterBlogGeneration()
-          } else {
-            console.log('⚠️ ブログ自動生成失敗:', await blogResponse.text())
-          }
-        } else {
-          console.log('⏳ 前営業日の小話がありません。ブログ生成は待機します...')
-        }
-      } catch (blogError) {
-        console.error('❌ ブログ生成中にエラー:', blogError)
-      }
+    // ブログ自動生成を試みる（未使用の日報が2件以上ある場合）
+    console.log('📰 ブログ自動生成を試みます...')
+    const generatedBlog = await autoGenerateBlog()
+
+    if (generatedBlog) {
+      console.log('✅ ブログが自動生成されました:', generatedBlog.title)
+    } else {
+      console.log('⏸️  ブログ生成条件が満たされていません')
     }
 
     const response = {
       report: newReport,
       generatedStory: generatedStory,
-      generatedBlog: blogResult
+      generatedBlog: generatedBlog
     }
-    
+
     return NextResponse.json(response)
   } catch (error) {
     console.error('日報作成エラー:', error)

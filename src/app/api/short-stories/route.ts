@@ -1,37 +1,56 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { adminDb } from '@/lib/firebaseAdmin'
 
 export async function GET() {
   try {
-    // 実際の実装ではSupabaseから取得
-    // const { data, error } = await supabase
-    //   .from('short_stories')
-    //   .select('*')
-    //   .eq('status', 'active')
-    //   .order('created_at', { ascending: false })
-    
-    // 仮のデータ（フィーチャーされた最新の小話）
-    const featuredStory = {
-      id: 'story-1',
-      title: '初めての安心、二度目の笑顔',
-      content: `暖かな春の日差しが差し込むサロンで、初回来店の女子高生のお客様をお迎えしました。最初は少し緊張されていましたが、お母様と一緒ということもあり、だんだんリラックスしていただけました。
+    console.log('📝 小話取得開始')
 
-施術が始まると「思ったより痛くない」と安心された表情を見せてくださり、最後は鏡で仕上がりを確認して素敵な笑顔を浮かべられました。「また来ます」という言葉と共に、明るい気持ちで帰られる姿を見て、私たちも温かい気持ちになりました。
+    // Firestoreから最新のactive小話を取得（statusフィルターのみ、インデックス不要）
+    const storiesSnapshot = await adminDb
+      .collection('short_stories')
+      .where('status', '==', 'active')
+      .get()
 
-お一人お一人の「初めての一歩」に寄り添えることは、私たちにとって何よりの喜びです。`,
-      report_date: '2024-08-15',
-      weather_info: '晴れ 28℃ 暖かく過ごしやすい日',
-      customer_type: '10代後半女性・初回来店',
-      key_moment: '施術後の安心した笑顔と「また来ます」という言葉',
-      emotional_tone: 'heartwarming',
-      is_featured: true,
-      created_at: '2024-08-15T10:00:00Z'
+    if (storiesSnapshot.empty) {
+      console.log('⚠️ 小話が見つかりません')
+      return NextResponse.json(
+        { error: '小話が見つかりません' },
+        { status: 404 }
+      )
     }
 
+    // JavaScriptでソートして最新の1件を取得
+    const stories = storiesSnapshot.docs.map(doc => ({
+      doc: doc,
+      createdAt: doc.data().createdAt?.toDate().getTime() || 0
+    }))
+
+    stories.sort((a, b) => b.createdAt - a.createdAt)
+
+    const doc = stories[0].doc
+    const docData = doc.data()
+
+    const featuredStory = {
+      id: doc.id,
+      title: docData.title,
+      content: docData.content,
+      reportDate: docData.reportDate,
+      weatherInfo: docData.weatherInfo,
+      customerType: docData.customerType,
+      keyMoment: docData.keyMoment,
+      emotionalTone: docData.emotionalTone,
+      isFeatured: docData.isFeatured,
+      createdAt: docData.createdAt?.toDate().toISOString(),
+      updatedAt: docData.updatedAt?.toDate().toISOString()
+    }
+
+    console.log('✅ 小話取得成功:', featuredStory.title)
     return NextResponse.json(featuredStory)
   } catch (error) {
-    console.error('小話取得エラー:', error)
-    return NextResponse.json({ error: '小話の取得に失敗しました' }, { status: 500 })
+    console.error('❌ 小話取得エラー:', error)
+    return NextResponse.json(
+      { error: '小話の取得に失敗しました' },
+      { status: 500 }
+    )
   }
 }
-

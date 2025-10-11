@@ -22,15 +22,15 @@ export default function Home() {
         <div className="container-custom relative z-10">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-6" style={{lineHeight: '1.4', textShadow: '2px 2px 4px rgba(0,0,0,0.1)'}}>
-              <span className="block mb-4">障害を持つお子さまとご家族が</span>
-              <span className="block mb-4">安心して通える、</span>
+              <span className="block mb-4">障害をお持ちのお子さまとご家族が、</span>
+              <span className="block mb-4">安心して通える</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 block" style={{textShadow: '2px 2px 4px rgba(0,0,0,0.2)'}}>
                 やさしい脱毛サロン
               </span>
             </h1>
             <p className="text-xl text-gray-700 mb-8 leading-relaxed max-w-4xl mx-auto" style={{textShadow: '1px 1px 3px rgba(0,0,0,0.1)'}}>
-              Dupe＆more（デュープアンドモア）では、障害を持つお子さまとご家族が
-              リラックスして脱毛施術を受けられる特別な環境をご用意しています。
+              Dupe&more（デュープアンドモア）では、障害をお持ちのお子さまとご家族が
+              安心して施術を受けられる、完全個室の特別な環境をご用意しています。
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/contact" className="btn-primary text-lg px-8 py-4 shadow-xl">
@@ -55,7 +55,7 @@ export default function Home() {
               安心して通える3つの理由
             </h2>
             <p className="text-xl text-gray-600">
-              お子さまとご家族の気持ちに寄り添います
+              障害をお持ちの方とご家族の気持ちに寄り添います
             </p>
           </div>
 
@@ -68,7 +68,7 @@ export default function Home() {
                 専門スタッフによる丁寧なケア
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                障害を持つお子さまの特性を理解した専門スタッフが、
+                障害をお持ちの方の特性を理解した専門スタッフが、
                 一人ひとりに合わせた施術を行います。
               </p>
             </div>
@@ -81,7 +81,7 @@ export default function Home() {
                 安心できる環境づくり
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                静かで落ち着いた空間で、お子さまがリラックスして
+                完全個室の落ち着いた空間で、お客様が安心して
                 施術を受けられる環境を整えています。
               </p>
             </div>
@@ -120,10 +120,10 @@ export default function Home() {
                 <span className="text-white text-3xl font-bold">1</span>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                無料カウンセリング
+                公式LINEにて無料相談
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                お子さまの状況やご希望を詳しくお聞きし、
+                施術を受けるお客様の状況やご希望を詳しくお聞きし、
                 最適なプランをご提案いたします。
               </p>
             </div>
@@ -133,7 +133,8 @@ export default function Home() {
                 <span className="text-white text-3xl font-bold">2</span>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                環境に慣れる
+                事前カウンセリングシート記入<br />
+                ご予約決定
               </h3>
               <p className="text-gray-600 leading-relaxed">
                 まずはサロンの雰囲気に慣れていただき、
@@ -146,10 +147,10 @@ export default function Home() {
                 <span className="text-white text-3xl font-bold">3</span>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                施術開始
+                ご来店
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                お子さまの体調やご機嫌に合わせて、
+                施術を受けるお客様の体調やご機嫌に合わせて、
                 無理のないペースで施術を行います。
               </p>
             </div>
@@ -170,11 +171,11 @@ export default function Home() {
             まずは無料相談から始めませんか？
           </h2>
           <p className="text-xl text-gray-700 mb-8 max-w-3xl mx-auto">
-            お子さまの状況や脱毛に関するご不安、どんなことでもお気軽にご相談ください。
+            障害をお持ちの方の状況や脱毛に関するご不安、どんなことでもお気軽にご相談ください。
             専門スタッフが丁寧にお答えいたします。
           </p>
           <Link href="/contact" className="bg-white text-primary-600 hover:bg-gray-50 font-semibold py-4 px-8 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 inline-block">
-            無料相談予約はこちら
+            公式LINEでの無料相談
           </Link>
         </div>
       </section>

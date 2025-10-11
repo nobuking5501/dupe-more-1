@@ -5,11 +5,11 @@ import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'Dupe＆more（デュープアンドモア）- 障害者専門脱毛サロン',
-  description: '障害を持つお子さまとご家族が安心して通える、やさしい脱毛サロンです。専門スタッフによる丁寧なカウンセリングと安心できる環境をご提供します。',
+  description: '障害をお持ちのお子さまとご家族が、安心して通えるやさしい脱毛サロンです。専門スタッフによる丁寧なカウンセリングと安心できる環境をご提供します。',
   keywords: '障害児,脱毛,専門サロン,安心,優しい,カウンセリング',
   openGraph: {
     title: 'Dupe＆more（デュープアンドモア）- 障害者専門脱毛サロン',
-    description: '障害を持つお子さまとご家族が安心して通える、やさしい脱毛サロンです。',
+    description: '障害をお持ちのお子さまとご家族が、安心して通えるやさしい脱毛サロンです。',
     type: 'website',
   },
 }

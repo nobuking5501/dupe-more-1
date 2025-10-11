@@ -1,8 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { ShortsClient, Short } from '@/lib/shorts-client'
-import { supabase } from '@/lib/supabase-client'
-import ShortsListing from './ShortsListing'
+import { adminDb } from '@/lib/firebaseAdmin'
+import ShortsListing, { Short } from './ShortsListing'
 
 export const metadata: Metadata = {
   title: '今日の小話 | Dupe&more',
@@ -20,39 +19,53 @@ export const revalidate = 0
 
 async function getInitialData() {
   try {
-    // Directly use Supabase to get latest short stories
-    console.log('Fetching shorts directly from Supabase for /shorts page')
-    const { data: stories, error } = await supabase
-      .from('short_stories')
-      .select('*')
-      .eq('status', 'active')
-      .order('is_featured', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(12)
+    // Directly use Firebase to get latest short stories
+    console.log('Fetching shorts directly from Firebase for /shorts page')
+    // statusフィルターのみ使用（インデックス不要）
+    const storiesSnapshot = await adminDb
+      .collection('short_stories')
+      .where('status', '==', 'active')
+      .get()
 
-    if (error) {
-      console.error('Supabase error in /shorts page:', error)
-    } else if (stories && stories.length > 0) {
-      console.log('Supabase shorts fetched for /shorts page:', stories.length, 'items')
-      
+    if (!storiesSnapshot.empty) {
+      const stories = storiesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        _createdAt: doc.data().createdAt?.toDate().getTime() || 0,
+        _isFeatured: doc.data().isFeatured ? 1 : 0
+      }))
+
+      // JavaScriptでソート（isFeatured優先、次にcreatedAt降順）
+      stories.sort((a: any, b: any) => {
+        if (b._isFeatured !== a._isFeatured) {
+          return b._isFeatured - a._isFeatured
+        }
+        return b._createdAt - a._createdAt
+      })
+
+      // 上位12件のみ取得
+      const limitedStories = stories.slice(0, 12)
+
+      console.log('Firebase shorts fetched for /shorts page:', limitedStories.length, 'items')
+
       // Convert to Short format (same as admin-shorts API)
-      const formattedShorts = stories.map(story => ({
+      const formattedShorts = limitedStories.map((story: any) => ({
         id: story.id,
         title: story.title,
         body_md: story.content,
-        tags: [story.emotional_tone],
+        tags: [story.emotionalTone],
         status: 'published' as const,
         pii_risk_score: 0,
-        source_report_ids: [story.source_report_id],
-        created_at: story.created_at,
-        published_at: story.created_at,
-        updated_at: story.updated_at || story.created_at
+        source_report_ids: [story.sourceReportId],
+        created_at: story.createdAt?.toDate().toISOString(),
+        published_at: story.createdAt?.toDate().toISOString(),
+        updated_at: story.updatedAt?.toDate().toISOString() || story.createdAt?.toDate().toISOString()
       }))
 
       // Extract unique tags
       const allTags = formattedShorts.flatMap((item: Short) => item.tags || [])
       const uniqueTags = Array.from(new Set(allTags)).sort()
-      
+
       return {
         shorts: formattedShorts,
         totalCount: formattedShorts.length,
@@ -61,20 +74,15 @@ async function getInitialData() {
         error: null
       }
     }
-    
-    // Fallback to ShortsClient if Supabase fails
-    console.log('Falling back to ShortsClient')
-    const [shortsResult, tagsResult] = await Promise.all([
-      ShortsClient.getPaginatedShorts(1, 12),
-      ShortsClient.getTags()
-    ])
 
+    // No data available
+    console.log('No short stories data available')
     return {
-      shorts: shortsResult.data || [],
-      totalCount: shortsResult.totalCount,
-      totalPages: shortsResult.totalPages,
-      tags: tagsResult.data || [],
-      error: shortsResult.error || tagsResult.error
+      shorts: [],
+      totalCount: 0,
+      totalPages: 0,
+      tags: [],
+      error: null
     }
   } catch (error) {
     console.error('Error fetching initial data for /shorts:', error)

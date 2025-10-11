@@ -369,7 +369,7 @@ ${formData.message}
                   <span className="text-primary-600 mr-3">📍</span>
                   <div>
                     <p className="font-medium text-gray-900">住所</p>
-                    <p>〒605-0075<br />京都市東山区京阪祗園四条南座前カモガワビル2F</p>
+                    <p>〒605-0075<br />京都市東山区大和大路西入ル中之町200カモガワビル2F</p>
                   </div>
                 </div>
                 <div className="flex items-center">

@@ -1,11 +1,50 @@
 import Link from 'next/link'
-import { SupabaseService } from '@/lib/supabase-client'
 import { formatDate } from '@/lib/utils'
+import { adminDb } from '@/lib/firebaseAdmin'
+
+async function getBlogPosts() {
+  try {
+    // statusフィルターのみ使用（インデックス不要）
+    const blogsSnapshot = await adminDb
+      .collection('blog_posts')
+      .where('status', '==', 'published')
+      .get()
+
+    // JavaScriptでソート
+    const blogs = blogsSnapshot.docs.map(doc => {
+      const data = doc.data()
+      // excerptがない場合はcontentから生成
+      let excerpt = data.excerpt || data.summary || ''
+      if (!excerpt && data.content) {
+        excerpt = data.content.substring(0, 150) + '...'
+      }
+
+      return {
+        id: doc.id,
+        title: data.title,
+        content: data.content,
+        slug: data.slug,
+        excerpt: excerpt,
+        tags: data.tags || [],
+        status: data.status,
+        created_at: data.createdAt?.toDate().toISOString(),
+        published_at: data.publishedAt?.toDate().toISOString(),
+        staff: { name: 'かなえ' },
+        _createdAt: data.createdAt?.toDate().getTime() || 0
+      }
+    })
+
+    // 作成日時でソート（新しい順）
+    return blogs.sort((a, b) => b._createdAt - a._createdAt)
+  } catch (error) {
+    console.error('ブログ取得エラー:', error)
+    return []
+  }
+}
 
 export default async function BlogPage() {
   // 公開されているブログ記事を取得
-  const result = await SupabaseService.getBlogPosts('published')
-  const blogPosts = result.data || []
+  const blogPosts = await getBlogPosts()
 
   return (
     <div className="min-h-screen bg-gray-50">

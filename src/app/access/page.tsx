@@ -44,8 +44,8 @@ export default function AccessPage() {
                     <h3 className="font-semibold text-gray-900 mb-1">住所</h3>
                     <p className="text-gray-700">
                       〒605-0075<br />
-                      京都市東山区京阪祗園四条南座前<br />
-                      カモガワビル2F
+                      京都市東山区大和大路西入ル<br />
+                      中之町200カモガワビル2F
                     </p>
                   </div>
                 </div>

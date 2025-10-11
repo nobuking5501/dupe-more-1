@@ -1,7 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ShortsClient, Short } from '@/lib/shorts-client'
+
+export interface Short {
+  id: string
+  title: string
+  body_md: string
+  tags: string[]
+  status: 'draft' | 'pending_review' | 'published'
+  pii_risk_score: number
+  source_report_ids: string[]
+  created_at: string
+  published_at?: string
+  updated_at: string
+}
 
 interface ShortsListingProps {
   initialShorts: Short[]
@@ -62,27 +74,10 @@ export default function ShortsListing({
         setTotalPages(Math.ceil(filteredShorts.length / pageSize))
         setCurrentPage(page)
       } else {
-        // Fallback to ShortsClient
-        let result
-
-        if (searchQuery.trim()) {
-          result = await ShortsClient.searchShorts(searchQuery.trim())
-          setTotalPages(1)
-          setCurrentPage(1)
-        } else if (selectedTag) {
-          result = await ShortsClient.getShortsByTag(selectedTag)
-          setTotalPages(1)
-          setCurrentPage(1)
-        } else {
-          result = await ShortsClient.getPaginatedShorts(page, 12)
-          setTotalPages(result.totalPages)
-          setCurrentPage(page)
-        }
-
-        if (result.data) {
-          setShorts(result.data)
-          setTotalCount(result.data.length)
-        }
+        console.error('Failed to fetch admin shorts')
+        setShorts([])
+        setTotalCount(0)
+        setTotalPages(0)
       }
     } catch (error) {
       console.error('Error fetching shorts:', error)

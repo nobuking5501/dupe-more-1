@@ -33,7 +33,12 @@ export async function GET() {
     return NextResponse.json(formattedData)
   } catch (error) {
     console.error('Service error:', error)
-    return NextResponse.json({ error: 'ブログ記事の取得に失敗しました' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({
+      error: 'ブログ記事の取得に失敗しました',
+      details: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined
+    }, { status: 500 })
   }
 }
 

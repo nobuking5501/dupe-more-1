@@ -49,7 +49,12 @@ export async function GET() {
     return NextResponse.json(formattedShorts)
   } catch (error) {
     console.error('Admin shorts取得エラー:', error)
-    return NextResponse.json({ error: '小話の取得に失敗しました' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({
+      error: '小話の取得に失敗しました',
+      details: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined
+    }, { status: 500 })
   }
 }
 

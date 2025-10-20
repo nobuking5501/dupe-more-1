@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { pricingData, discountTiers } from '@/data/pricing';
 import PricingFilter from './PricingFilter';
 import PriceTable from './PriceTable';
@@ -8,12 +8,13 @@ import PriceCard from './PriceCard';
 import EstimateToast from './EstimateToast';
 
 export default function PricingSection() {
-  const [selectedSections, setSelectedSections] = useState<string[]>(() => 
+  const [selectedSections, setSelectedSections] = useState<string[]>(() =>
     Array.from(new Set(pricingData.map(item => item.section)))
   );
   const [showSetEligibleOnly, setShowSetEligibleOnly] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [showEstimate, setShowEstimate] = useState(false);
+  const [currentDate, setCurrentDate] = useState<string>('');
 
   // フィルタリングされたデータ
   const filteredData = useMemo(() => {
@@ -52,12 +53,14 @@ export default function PricingSection() {
     setShowEstimate(false);
   };
 
-  // 現在の日付を取得
-  const currentDate = new Date().toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  // クライアント側で現在の日付を設定
+  useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }));
+  }, []);
 
   return (
     <section className="section-padding bg-gradient-to-r from-gray-50 to-blue-50">
@@ -193,9 +196,11 @@ export default function PricingSection() {
         </div>
 
         {/* 更新日 */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          料金表最終更新日: {currentDate}
-        </div>
+        {currentDate && (
+          <div className="mt-8 text-center text-sm text-gray-500">
+            料金表最終更新日: {currentDate}
+          </div>
+        )}
       </div>
     </section>
   );

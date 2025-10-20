@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const availableReports = availableReportsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }))
+    })) as Array<{ id: string; reportDate?: string; [key: string]: any }>
 
     if (availableReports.length < 12) {
       const errorMsg = `12記事生成には最低12個の日報が必要です。現在：${availableReports.length}個`
@@ -81,12 +81,12 @@ export async function POST(request: Request) {
         const newerReport = !newerReportsSnapshot.empty ? {
           id: newerReportsSnapshot.docs[0].id,
           ...newerReportsSnapshot.docs[0].data()
-        } : null
+        } as { id: string; reportDate?: string; [key: string]: any } : null
 
         const olderReport = !olderReportsSnapshot.empty ? {
           id: olderReportsSnapshot.docs[0].id,
           ...olderReportsSnapshot.docs[0].data()
-        } : null
+        } as { id: string; reportDate?: string; [key: string]: any } : null
 
         if (newerReport && olderReport) {
           reportPairs.push({
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
         const existingBlog = {
           id: existingBlogSnapshot.docs[0].id,
           ...existingBlogSnapshot.docs[0].data()
-        }
+        } as { id: string; title?: string; [key: string]: any }
         console.log(`⚠️ スキップ（既存）: ${existingBlog.title}`)
         savedBlogs.push(existingBlog)
         continue

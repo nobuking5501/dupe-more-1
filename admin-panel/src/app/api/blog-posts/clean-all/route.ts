@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const allBlogs = blogsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }))
+    })) as Array<{ id: string; title?: string; content?: string; createdAt?: any }>
 
     if (allBlogs.length === 0) {
       return NextResponse.json({

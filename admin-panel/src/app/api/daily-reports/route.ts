@@ -193,7 +193,7 @@ async function autoGenerateBlog() {
     const allReports = allReportsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }))
+    })) as Array<{ id: string; reportDate?: string; [key: string]: any }>
 
     console.log(`📊 利用可能な日報: ${allReports.length}件`)
 

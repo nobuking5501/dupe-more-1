@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     const availableReports = reportsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }))
+    })) as Array<{ id: string; reportDate?: string; [key: string]: any }>
 
     if (availableReports.length < 2) {
       const errorMsg = `ブログ生成には最低2つの日報が必要です`
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
       const existingBlog = {
         id: existingBlogSnapshot.docs[0].id,
         ...existingBlogSnapshot.docs[0].data()
-      }
+      } as { id: string; title?: string; [key: string]: any }
       console.log('✅ 同じ日付ペアのブログが既に存在します:', existingBlog.title)
       await logMessage('info', `既存ブログを返却: ${existingBlog.title}`, { blogId: existingBlog.id })
       return NextResponse.json(existingBlog)
@@ -158,12 +158,12 @@ export async function POST(request: Request) {
     const newerReport = !newerReportsSnapshot.empty ? {
       id: newerReportsSnapshot.docs[0].id,
       ...newerReportsSnapshot.docs[0].data()
-    } : null
+    } as { id: string; reportDate?: string; [key: string]: any } : null
 
     const olderReport = !olderReportsSnapshot.empty ? {
       id: olderReportsSnapshot.docs[0].id,
       ...olderReportsSnapshot.docs[0].data()
-    } : null
+    } as { id: string; reportDate?: string; [key: string]: any } : null
 
     if (!newerReport || !olderReport) {
       const missingDates = []

@@ -154,7 +154,7 @@ export async function POST(request: Request) {
     const allReports = allReportsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }))
+    })) as Array<{ id: string; customerAttributes?: string; [key: string]: any }>
 
     // 既存の小話の日報IDを取得
     const existingStoriesSnapshot = await adminDb

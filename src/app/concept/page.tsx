@@ -107,7 +107,7 @@ export default function ConceptPage() {
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center mb-8">
               <span className="text-4xl mr-4">🤝</span>
-              <h2 className="text-3xl font-bold text-gray-800">お約束と伴走</h2>
+              <h2 className="text-3xl font-bold text-gray-800">Kanaeからのお約束</h2>
             </div>
             <div className="space-y-6">
               <div className="text-center mb-8">
@@ -115,16 +115,19 @@ export default function ConceptPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-400">
-                  <p className="font-semibold text-gray-800">お子さまのペースに合わせます。</p>
+                  <p className="font-semibold text-gray-800">お客様のペースに合わせます。</p>
                 </div>
                 <div className="bg-green-50 p-6 rounded-lg border-l-4 border-green-400">
-                  <p className="font-semibold text-gray-800">嫌がることは絶対にしません。</p>
+                  <p className="font-semibold text-gray-800">途中で嫌がってできなくなってしまっても、できた箇所のみの料金で安心です。</p>
                 </div>
                 <div className="bg-yellow-50 p-6 rounded-lg border-l-4 border-yellow-400">
                   <p className="font-semibold text-gray-800">立ったままでも、短時間でも大丈夫です。</p>
                 </div>
                 <div className="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-400">
-                  <p className="font-semibold text-gray-800">光や音が苦手なら、事前にしっかり配慮します。</p>
+                  <p className="font-semibold text-gray-800">来店したが施術に至らなかった場合：料金はいただきません。</p>
+                </div>
+                <div className="bg-pink-50 p-6 rounded-lg border-l-4 border-pink-400">
+                  <p className="font-semibold text-gray-800">苦手なこと等、事前にしっかりカウンセリングでお聞きします。</p>
                 </div>
               </div>
               <div className="mt-8 bg-gradient-to-r from-green-50 to-blue-50 p-8 rounded-lg text-center border-2 border-green-200">
@@ -157,13 +160,10 @@ export default function ConceptPage() {
                   「障害があるから無理」――そう思ってほしくありません。
                 </p>
                 <p className="text-lg text-gray-700 mb-4">
-                  必ず、一人ひとりに合った方法があります。
+                  一人ひとりに合った方法を一緒にみつけていきたいと思っております。
                 </p>
                 <p className="text-lg text-gray-700 mb-6">
-                  同じ母親として、あなたのお子さまが<span className="text-blue-600 font-bold text-xl">&ldquo;できた！&rdquo;と笑顔になる瞬間</span>を一緒に作っていきたい。
-                </p>
-                <p className="text-xl font-bold text-gray-800">
-                  そのお手伝いを、心からさせてください。
+                  同じ母親として、あなたのお子さまができた！と笑顔になる瞬間を一緒に増やしていきましょう！
                 </p>
               </div>
             </div>
@@ -176,14 +176,14 @@ export default function ConceptPage() {
         <div className="container-custom text-center">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-700 mb-6">
-              まずは、お気軽にご相談ください。
+              まずは、お気軽に公式LINEにてご相談ください。
             </h2>
             <p className="text-xl text-gray-600 mb-6">
               「うちの子でも大丈夫？」そんな不安も含めて、お話をお聞かせください。
             </p>
             <div className="mb-8">
               <Link href="/contact" className="bg-white text-primary-600 hover:bg-gray-50 font-semibold py-4 px-8 rounded-full transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 inline-block">
-                無料相談予約はこちら
+                公式LINEでの無料相談はこちら
               </Link>
             </div>
             <p className="text-lg text-gray-600 italic">

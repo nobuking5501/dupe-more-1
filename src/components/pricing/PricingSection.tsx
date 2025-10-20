@@ -72,10 +72,23 @@ export default function PricingSection() {
           </p>
           
           {/* 注意書き */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
-            <p className="text-blue-800 font-medium">
-              ※ セット割は <span className="text-blue-600">☆</span> マークの部位のみ対象です。価格は税込です。
-            </p>
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-lg p-6 max-w-3xl mx-auto">
+            <div className="space-y-3">
+              <p className="text-blue-900 font-semibold text-lg flex items-center">
+                <span className="text-2xl mr-2">✓</span>
+                セット割引で最大50%OFF！
+              </p>
+              <div className="ml-8 space-y-2">
+                <p className="text-blue-800">
+                  <span className="text-blue-600 font-bold text-xl">☆</span> マークの部位を複数選択すると、自動的にお得な割引が適用されます。
+                </p>
+                <p className="text-gray-700 text-sm">
+                  • 全ての部位にチェックボックスがあり、見積りに追加できます<br/>
+                  • セット割引は☆マーク付き部位のみに適用されます<br/>
+                  • 価格は全て税込です
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

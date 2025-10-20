@@ -14,46 +14,41 @@ export interface DiscountTier {
 
 export const pricingData: PricingItem[] = [
   // 顔部位
-  { section: "顔", area: "両頰", basePrice: 8000, setEligible: true },
-  { section: "顔", area: "顎", basePrice: 6000, setEligible: true },
-  { section: "顔", area: "口周り", basePrice: 5000, setEligible: true },
-  { section: "顔", area: "額", basePrice: 7000, setEligible: true },
-  { section: "顔", area: "眉間", basePrice: 3000, setEligible: true },
-  { section: "顔", area: "鼻下", basePrice: 4000, setEligible: true },
-  
-  // 手部位
-  { section: "手", area: "両腕（肘上）", basePrice: 15000, setEligible: true },
-  { section: "手", area: "両腕（肘下）", basePrice: 12000, setEligible: true },
-  { section: "手", area: "両手の甲・指", basePrice: 8000, setEligible: true },
-  { section: "手", area: "両脇", basePrice: 10000, setEligible: true },
-  
-  // 足部位
-  { section: "足", area: "両脚（膝上）", basePrice: 20000, setEligible: true },
-  { section: "足", area: "両脚（膝下）", basePrice: 18000, setEligible: true },
-  { section: "足", area: "両足の甲・指", basePrice: 8000, setEligible: true },
-  { section: "足", area: "膝", basePrice: 6000, setEligible: true },
-  
+  { section: "顔", area: "男性:髭のみ", basePrice: 6600, setEligible: true },
+  { section: "顔", area: "女性:全顔", basePrice: 6600, setEligible: true },
+  { section: "顔", area: "ホホ（オプション）", basePrice: 1100, setEligible: false },
+  { section: "顔", area: "おでこ（オプション）", basePrice: 1100, setEligible: false },
+
+  // 手
+  { section: "手", area: "両腕（二の腕+ひじ下）", basePrice: 8800, setEligible: true },
+  { section: "手", area: "二の腕のみ", basePrice: 4400, setEligible: false },
+  { section: "手", area: "ひじ下のみ", basePrice: 4400, setEligible: false },
+  { section: "手", area: "両手（甲・指）", basePrice: 1100, setEligible: false },
+
+  // 足
+  { section: "足", area: "両足（もも+すね）", basePrice: 8800, setEligible: true },
+  { section: "足", area: "もものみ", basePrice: 4400, setEligible: false },
+  { section: "足", area: "すねのみ", basePrice: 4400, setEligible: false },
+  { section: "足", area: "両足の甲", basePrice: 1100, setEligible: false },
+
   // VIO部位
-  { section: "VIO", area: "Vライン", basePrice: 12000, setEligible: true },
-  { section: "VIO", area: "Iライン", basePrice: 10000, setEligible: true },
-  { section: "VIO", area: "Oライン", basePrice: 8000, setEligible: true },
-  
-  // 身体-前面
-  { section: "身体-前面", area: "胸", basePrice: 15000, setEligible: true },
-  { section: "身体-前面", area: "お腹", basePrice: 12000, setEligible: true },
-  { section: "身体-前面", area: "へそ周り", basePrice: 5000, setEligible: true },
-  
-  // 身体-背面  
-  { section: "身体-背面", area: "うなじ", basePrice: 8000, setEligible: true },
-  { section: "身体-背面", area: "背中（上）", basePrice: 15000, setEligible: true },
-  { section: "身体-背面", area: "背中（下）", basePrice: 15000, setEligible: true },
-  { section: "身体-背面", area: "腰", basePrice: 10000, setEligible: true },
-  { section: "身体-背面", area: "ヒップ", basePrice: 12000, setEligible: true },
-  
-  // オプション（セット対象外）
-  { section: "オプション", area: "シェービング", basePrice: 2000, setEligible: false },
-  { section: "オプション", area: "アフターケア", basePrice: 1500, setEligible: false },
-  { section: "オプション", area: "カウンセリング延長", basePrice: 3000, setEligible: false }
+  { section: "VIO", area: "VIO（ハイジニーナ）", basePrice: 8800, setEligible: true },
+  { section: "VIO", area: "Vライン（単部位）", basePrice: 3300, setEligible: false },
+  { section: "VIO", area: "Iライン（単部位）", basePrice: 3300, setEligible: false },
+  { section: "VIO", area: "Oライン", basePrice: 3300, setEligible: false },
+
+  // 身体（前面）
+  { section: "身体（前面）", area: "胸", basePrice: 6600, setEligible: true },
+  { section: "身体（前面）", area: "お腹", basePrice: 6600, setEligible: true },
+  { section: "身体（前面）", area: "両ワキ", basePrice: 2200, setEligible: false },
+
+  // 身体（背面）
+  { section: "身体（背面）", area: "うなじ", basePrice: 2200, setEligible: false },
+  { section: "身体（背面）", area: "背中", basePrice: 8800, setEligible: true },
+  { section: "身体（背面）", area: "おしり", basePrice: 6600, setEligible: true },
+
+  // その他
+  { section: "その他", area: "シェービング", basePrice: 1100, setEligible: false }
 ];
 
 export const discountTiers: DiscountTier[] = [

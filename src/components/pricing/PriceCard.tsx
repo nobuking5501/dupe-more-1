@@ -13,7 +13,10 @@ interface PriceCardProps {
 
 export default function PriceCard({ data, discountTiers, selectedItems, onItemSelect }: PriceCardProps) {
   const groupedData = groupPricingBySection(data);
-  const [expandedSections, setExpandedSections] = useState<string[]>(['顔']); // デフォルトで顔セクションを展開
+  // デフォルトで全セクションを展開
+  const [expandedSections, setExpandedSections] = useState<string[]>(() =>
+    groupedData.map(group => group.section)
+  );
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -30,24 +33,24 @@ export default function PriceCard({ data, discountTiers, selectedItems, onItemSe
           const isExpanded = expandedSections.includes(group.section);
           
           return (
-            <div key={group.section} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+            <div key={group.section} className="bg-white rounded-lg shadow-lg border-2 border-blue-200 overflow-hidden">
               {/* セクション見出し */}
               <button
                 onClick={() => toggleSection(group.section)}
-                className="w-full px-6 py-4 text-left bg-blue-50 border-b border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
+                className="w-full px-6 py-4 text-left bg-gradient-to-r from-blue-100 to-blue-50 border-b-2 border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset"
                 aria-expanded={isExpanded}
                 aria-controls={`section-${group.section}`}
               >
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-800">{group.section}</h3>
+                  <h3 className="text-xl font-bold text-gray-900">{group.section}</h3>
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm font-medium text-gray-700">
                       {group.items.length}項目
                     </span>
                     {isExpanded ? (
-                      <ChevronUpIcon className="w-5 h-5 text-gray-500" />
+                      <ChevronUpIcon className="w-5 h-5 text-gray-600" />
                     ) : (
-                      <ChevronDownIcon className="w-5 h-5 text-gray-500" />
+                      <ChevronDownIcon className="w-5 h-5 text-gray-600" />
                     )}
                   </div>
                 </div>
@@ -60,54 +63,59 @@ export default function PriceCard({ data, discountTiers, selectedItems, onItemSe
                     const isSelected = selectedItems.includes(item.area);
                     
                     return (
-                      <div key={`${group.section}-${item.area}`} className="p-4">
+                      <div
+                        key={`${group.section}-${item.area}`}
+                        className={`p-4 ${isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''}`}
+                      >
                         <div className="space-y-3">
                           {/* 部位名とチェックボックス */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              {item.setEligible && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="flex items-center space-x-2 cursor-pointer flex-1">
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={(e) => onItemSelect(item.area, e.target.checked)}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0 cursor-pointer"
                                   aria-label={`${item.area}を見積りに追加`}
                                 />
-                              )}
-                              <h4 className="font-medium text-gray-900">{item.area}</h4>
-                              {item.setEligible && (
-                                <>
-                                  <span className="text-blue-500" aria-hidden="true">☆</span>
-                                  <span className="sr-only">セット対象</span>
-                                </>
-                              )}
+                                <h4 className="font-medium text-gray-900">{item.area}</h4>
+                                {item.setEligible && (
+                                  <span className="text-blue-500 text-lg" aria-hidden="true">☆</span>
+                                )}
+                              </label>
+                              <span className="text-lg font-bold text-gray-900 ml-2">
+                                {formatPrice(item.basePrice)}
+                              </span>
                             </div>
-                            <span className="text-lg font-bold text-gray-900">
-                              {formatPrice(item.basePrice)}
-                            </span>
+                            {item.area === 'シェービング' && (
+                              <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded ml-7">
+                                ※ うなじ・背中は手が届かないのでこちらで無料でシェービングしてます
+                              </div>
+                            )}
                           </div>
 
                           {/* 割引価格（セット対象のみ） */}
                           {item.setEligible && (
                             <details className="mt-2">
                               <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset rounded">
-                                セット割引価格を見る
+                                セット割引価格を見る（最大50%OFF）
                                 <span className="sr-only">（{item.area}の割引価格一覧）</span>
                               </summary>
-                              
-                              <div className="mt-3 space-y-2 pl-4 border-l-2 border-blue-100">
+
+                              <div className="mt-3 space-y-2 pl-4 border-l-4 border-green-200">
                                 {discountTiers.map((tier) => {
                                   const discountPrice = calculateDiscountPrice(item.basePrice, tier.rate);
                                   const savings = item.basePrice - discountPrice;
-                                  
+
                                   return (
-                                    <div 
-                                      key={tier.places} 
-                                      className="flex items-center justify-between text-sm"
+                                    <div
+                                      key={tier.places}
+                                      className="flex items-center justify-between text-sm bg-green-50 p-2 rounded"
                                     >
-                                      <span className="text-gray-600">{tier.label}</span>
+                                      <span className="text-gray-700 font-medium">{tier.label}</span>
                                       <div className="text-right">
-                                        <div className="font-semibold text-green-600">
+                                        <div className="font-bold text-green-600">
                                           {formatPrice(discountPrice)}
                                         </div>
                                         <div className="text-xs text-gray-500">

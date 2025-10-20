@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     const reports = reportsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }))
+    })) as Array<{ id: string; reportDate?: string; customerAttributes?: string; visitReasonPurpose?: string; [key: string]: any }>
 
     console.log('📊 クエリ結果:', {
       targetDate,
@@ -226,7 +226,7 @@ export async function POST(request: Request) {
     await batch.commit()
 
     // 既存レコードがある場合は更新、ない場合は挿入
-    let newStory
+    let newStory: { id: string; title?: string; [key: string]: any }
     if (existingStory) {
       // 既存レコードを更新
       await adminDb

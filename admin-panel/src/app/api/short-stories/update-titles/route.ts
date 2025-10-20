@@ -103,12 +103,13 @@ export async function POST(request: Request) {
       .collection('short_stories')
       .get()
 
-    const genericStories = storiesSnapshot.docs
+    const allStories = storiesSnapshot.docs
       .map(doc => ({
         id: doc.id,
         ...doc.data()
-      }))
-      .filter(story => story.title && story.title.includes('の心温まる時間'))
+      })) as Array<{ id: string; title?: string; content?: string; customerType?: string; keyMoment?: string; emotionalTone?: string; reportDate?: string; [key: string]: any }>
+
+    const genericStories = allStories.filter(story => story.title && story.title.includes('の心温まる時間'))
 
     console.log('📊 更新対象の小話:', genericStories.length, '件')
 

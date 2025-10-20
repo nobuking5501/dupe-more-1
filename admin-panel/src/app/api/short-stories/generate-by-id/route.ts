@@ -171,7 +171,7 @@ export async function POST(request: Request) {
     const report = {
       id: reportDoc.id,
       ...reportDoc.data()
-    }
+    } as { id: string; customerAttributes?: string; [key: string]: any }
 
     // 有効なデータかチェック
     if (!report.customerAttributes || !report.customerAttributes.trim()) {
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
       const existingStory = {
         id: existingStorySnapshot.docs[0].id,
         ...existingStorySnapshot.docs[0].data()
-      }
+      } as { id: string; title?: string; [key: string]: any }
       console.log('✅ この日報IDからの小話が既に存在します:', existingStory.title)
       await logMessage('info', `既存小話を返却: ${existingStory.title}`, { storyId: existingStory.id })
       return NextResponse.json(existingStory)

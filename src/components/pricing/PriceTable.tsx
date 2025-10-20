@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { PricingItem, DiscountTier, formatPrice, calculateDiscountPrice, groupPricingBySection } from '@/data/pricing';
 
 interface PriceTableProps {
@@ -166,6 +167,3 @@ export default function PriceTable({ data, discountTiers, selectedItems, onItemS
     </div>
   );
 }
-
-// React Fragment の import を追加
-import React from 'react';

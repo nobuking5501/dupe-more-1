@@ -13,10 +13,13 @@ interface PriceCardProps {
 
 export default function PriceCard({ data, discountTiers, selectedItems, onItemSelect }: PriceCardProps) {
   const groupedData = groupPricingBySection(data);
-  // デフォルトで全セクションを展開
-  const [expandedSections, setExpandedSections] = useState<string[]>(() =>
-    groupedData.map(group => group.section)
-  );
+  // デフォルトで全セクションを展開（useEffectで設定）
+  const [expandedSections, setExpandedSections] = useState<string[]>([]);
+
+  // クライアント側で初期展開状態を設定
+  React.useEffect(() => {
+    setExpandedSections(groupedData.map(group => group.section));
+  }, []);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 

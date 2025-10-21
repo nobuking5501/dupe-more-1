@@ -18,8 +18,10 @@ export default function PriceCard({ data, discountTiers, selectedItems, onItemSe
 
   // クライアント側で初期展開状態を設定
   React.useEffect(() => {
-    setExpandedSections(groupedData.map(group => group.section));
-  }, []);
+    if (groupedData.length > 0 && expandedSections.length === 0) {
+      setExpandedSections(groupedData.map(group => group.section));
+    }
+  }, [groupedData, expandedSections.length]);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 

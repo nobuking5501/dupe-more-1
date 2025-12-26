@@ -1,0 +1,16 @@
+# Ignore owner-message files (deleted but cached by Vercel)
+src/app/api/owner-message/
+
+# Node modules
+node_modules/
+
+# Build output
+.next/
+out/
+
+# Testing
+coverage/
+*.log
+
+# Local env files
+.env*.local

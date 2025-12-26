@@ -3,7 +3,6 @@ import { adminDb } from '@/lib/firebaseAdmin'
 import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { callClaudeGenerateAPI } from '@/lib/claude-generate'
 import { callClaudeCleanAPI } from '@/lib/claude-clean'
-import fetch from 'node-fetch'
 
 console.log('=== 管理画面 Firebase設定確認 ===')
 

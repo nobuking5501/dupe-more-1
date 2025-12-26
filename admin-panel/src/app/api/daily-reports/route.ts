@@ -95,8 +95,7 @@ async function generateShortStory(reportData: any) {
             role: 'user',
             content: prompt
           }]
-        }),
-        timeout: 60000  // 60秒タイムアウト
+        })
       })
 
       console.log('Claude APIレスポンス状態:', response.status)

@@ -22,6 +22,8 @@ export default function DailyReportsPage() {
   const [reports, setReports] = useState<DailyReport[]>([])
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [fetchLoading, setFetchLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [expandedReport, setExpandedReport] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     staff_name: 'かなえ',
@@ -42,14 +44,27 @@ export default function DailyReportsPage() {
   }, [])
 
   const fetchReports = async () => {
+    setFetchLoading(true)
+    setError(null)
     try {
+      console.log('日報データを取得中...')
       const response = await fetch('/api/daily-reports')
+      console.log('APIレスポンス:', response.status, response.statusText)
+
       if (response.ok) {
         const data = await response.json()
+        console.log('取得した日報件数:', data.length)
         setReports(data)
+      } else {
+        const errorText = await response.text()
+        console.error('APIエラー:', response.status, errorText)
+        setError(`データの取得に失敗しました (${response.status}): ${errorText}`)
       }
     } catch (error) {
       console.error('日報取得エラー:', error)
+      setError(`接続エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+    } finally {
+      setFetchLoading(false)
     }
   }
 
@@ -300,9 +315,46 @@ export default function DailyReportsPage() {
             <h2 className="text-xl font-semibold text-gray-900">日報一覧</h2>
             <p className="text-gray-600 text-sm mt-1">登録済みの日報を確認できます（行をクリックで詳細表示）</p>
           </div>
-          
+
+          {/* ローディング表示 */}
+          {fetchLoading && (
+            <div className="p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              <p className="mt-4 text-gray-600">日報データを読み込み中...</p>
+            </div>
+          )}
+
+          {/* エラー表示 */}
+          {error && (
+            <div className="p-6 m-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-sm font-medium text-red-800">エラーが発生しました</h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    <p>{error}</p>
+                    <p className="mt-2">Vercelの環境変数を確認してください：</p>
+                    <ul className="list-disc list-inside mt-1">
+                      <li>FIREBASE_PROJECT_ID</li>
+                      <li>FIREBASE_CLIENT_EMAIL</li>
+                      <li>FIREBASE_PRIVATE_KEY</li>
+                    </ul>
+                  </div>
+                  <button
+                    onClick={fetchReports}
+                    className="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                  >
+                    再読み込み
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="divide-y divide-gray-200">
-            {reports.map((report) => (
+            {!fetchLoading && !error && reports.map((report) => (
               <div key={report.id}>
                 {/* 日報サマリー行 */}
                 <div 
@@ -431,7 +483,7 @@ export default function DailyReportsPage() {
               </div>
             ))}
             
-            {reports.length === 0 && (
+            {!fetchLoading && !error && reports.length === 0 && (
               <div className="p-8 text-center text-gray-500">
                 まだ日報が登録されていません。
               </div>

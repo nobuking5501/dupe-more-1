@@ -40,7 +40,7 @@ export default function ShortsListing({
   const fetchShorts = async (page: number = 1) => {
     setLoading(true)
     try {
-      // Use admin-shorts API for latest Supabase data
+      // Use admin-shorts API for latest Firebase data
       const adminResponse = await fetch('/api/admin-shorts')
       
       if (adminResponse.ok) {

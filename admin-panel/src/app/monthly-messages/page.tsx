@@ -22,7 +22,7 @@ export default function MonthlyMessagesPage() {
 
   const fetchMessages = async () => {
     try {
-      // 仮のデータ（実際にはSupabaseから取得）
+      // 仮のデータ（実際にはFirebaseから取得予定）
       const mockMessages = [
         {
           id: '1',

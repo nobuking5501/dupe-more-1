@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebaseAdmin'
 import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { callClaudeGenerateAPI } from '@/lib/claude-generate'
 import { callClaudeCleanAPI } from '@/lib/claude-clean'
+import fetch from 'node-fetch'
 
 console.log('=== 管理画面 Firebase設定確認 ===')
 
@@ -80,85 +81,91 @@ async function generateShortStory(reportData: any) {
 
     console.log('Claude APIに送信するプロンプト長:', prompt.length, '文字')
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: prompt
-        }]
-      })
-    })
-
-    console.log('Claude APIレスポンス状態:', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Claude API error:', response.status, response.statusText, errorText)
-      return null
-    }
-
-    const claudeResponse = await response.json()
-    const generatedText = claudeResponse.content[0].text
-
-    console.log('Claude API応答受信 - 文字数:', generatedText.length)
-
-    // JSONを抽出して解析
-    let storyData
     try {
-      const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        storyData = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('JSON not found in response')
-      }
-    } catch (parseError) {
-      console.error('JSON parsing error:', parseError)
-      console.error('Generated text:', generatedText?.substring(0, 500) + '...')
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': CLAUDE_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: prompt
+          }]
+        }),
+        timeout: 60000  // 60秒タイムアウト
+      })
 
-      // 感動的なフォールバック小話を生成
-      const createHeartwarming = (data: any) => {
-        if (data.customerAfterTreatment && data.customerBeforeTreatment) {
-          return `${data.weatherTemperature || '穏やかな'}日、当サロンに${data.customerAttributes || 'あるお客様'}がいらっしゃいました。${data.customerBeforeTreatment || '最初は少し緊張されていましたが'}、施術を進めていくうちに、${data.customerAfterTreatment || '安心した表情を見せてくださいました'}。\n\nそんな瞬間に立ち会えることは、私たちスタッフにとって何よりの喜びです。${data.kanaePersonalThoughts || 'お客様との信頼関係を大切に、今日も温かい時間を過ごすことができました'}。`
+      console.log('Claude APIレスポンス状態:', response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Claude API error:', response.status, response.statusText, errorText)
+        return null
+      }
+
+      const claudeResponse = await response.json()
+      const generatedText = claudeResponse.content[0].text
+
+      console.log('Claude API応答受信 - 文字数:', generatedText.length)
+
+      // JSONを抽出して解析
+      let storyData
+      try {
+        const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          storyData = JSON.parse(jsonMatch[0])
         } else {
-          return `${data.weatherTemperature || '心地よい'}日、サロンには温かな時間が流れていました。${data.customerAttributes || 'お客様'}との出会いは、私たちにとって特別な瞬間です。\n\n一人ひとりのペースに寄り添いながら、安心してお過ごしいただけるよう心がけています。${data.kanaePersonalThoughts || '今日もお客様の笑顔に出会えて、幸せな気持ちでいっぱいです'}。`
+          throw new Error('JSON not found in response')
+        }
+      } catch (parseError) {
+        console.error('JSON parsing error:', parseError)
+        console.error('Generated text:', generatedText?.substring(0, 500) + '...')
+
+        // 感動的なフォールバック小話を生成
+        const createHeartwarming = (data: any) => {
+          if (data.customerAfterTreatment && data.customerBeforeTreatment) {
+            return `${data.weatherTemperature || '穏やかな'}日、当サロンに${data.customerAttributes || 'あるお客様'}がいらっしゃいました。${data.customerBeforeTreatment || '最初は少し緊張されていましたが'}、施術を進めていくうちに、${data.customerAfterTreatment || '安心した表情を見せてくださいました'}。\n\nそんな瞬間に立ち会えることは、私たちスタッフにとって何よりの喜びです。${data.kanaePersonalThoughts || 'お客様との信頼関係を大切に、今日も温かい時間を過ごすことができました'}。`
+          } else {
+            return `${data.weatherTemperature || '心地よい'}日、サロンには温かな時間が流れていました。${data.customerAttributes || 'お客様'}との出会いは、私たちにとって特別な瞬間です。\n\n一人ひとりのペースに寄り添いながら、安心してお過ごしいただけるよう心がけています。${data.kanaePersonalThoughts || '今日もお客様の笑顔に出会えて、幸せな気持ちでいっぱいです'}。`
+          }
+        }
+
+        storyData = {
+          title: reportData.customerAfterTreatment?.includes('笑顔') ? '笑顔が繋ぐ温かい時間' :
+                 reportData.customerAfterTreatment?.includes('安心') ? '安心して過ごした一日' :
+                 reportData.customerBeforeTreatment?.includes('緊張') ? '緊張から安心への変化' :
+                 '心温まるサロンの時間',
+          content: createHeartwarming(reportData),
+          emotional_tone: 'heartwarming'
         }
       }
 
-      storyData = {
-        title: reportData.customerAfterTreatment?.includes('笑顔') ? '笑顔が繋ぐ温かい時間' :
-               reportData.customerAfterTreatment?.includes('安心') ? '安心して過ごした一日' :
-               reportData.customerBeforeTreatment?.includes('緊張') ? '緊張から安心への変化' :
-               '心温まるサロンの時間',
-        content: createHeartwarming(reportData),
-        emotional_tone: 'heartwarming'
+      const shortStory = {
+        title: storyData.title || `${new Date(reportData.reportDate).toLocaleDateString('ja-JP')}の心温まる時間`,
+        content: storyData.content,
+        sourceReportId: reportData.id,
+        reportDate: reportData.reportDate,
+        weatherInfo: reportData.weatherTemperature,
+        customerType: reportData.customerAttributes,
+        keyMoment: reportData.customerAfterTreatment,
+        emotionalTone: storyData.emotional_tone || 'heartwarming',
+        status: 'active',
+        isFeatured: true,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
       }
-    }
 
-    const shortStory = {
-      title: storyData.title || `${new Date(reportData.reportDate).toLocaleDateString('ja-JP')}の心温まる時間`,
-      content: storyData.content,
-      sourceReportId: reportData.id,
-      reportDate: reportData.reportDate,
-      weatherInfo: reportData.weatherTemperature,
-      customerType: reportData.customerAttributes,
-      keyMoment: reportData.customerAfterTreatment,
-      emotionalTone: storyData.emotional_tone || 'heartwarming',
-      status: 'active',
-      isFeatured: true,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp()
+      console.log('Generated short story:', shortStory.title)
+      return shortStory
+    } catch (fetchError) {
+      console.error('Claude API fetch error:', fetchError)
+      throw fetchError  // 外側のcatchブロックで処理
     }
-
-    console.log('Generated short story:', shortStory.title)
-    return shortStory
   } catch (error) {
     console.error('小話生成エラー:', error)
     // エラー時のフォールバック小話

@@ -9,7 +9,13 @@ let adminDb: Firestore
 if (!getApps().length) {
   const projectId = process.env.FIREBASE_PROJECT_ID
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  // \nエスケープシーケンスを実際の改行に変換
+  // 既に改行が入っている場合はそのまま使用
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY
+  if (privateKey) {
+    // \n（バックスラッシュ+n）を改行に変換
+    privateKey = privateKey.replace(/\\n/g, '\n')
+  }
 
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error(

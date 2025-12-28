@@ -44,6 +44,85 @@ export default function Home() {
         </div>
       </section>
 
+      {/* YouTube Shorts Section */}
+      <section className="section-padding bg-white">
+        <div className="container-custom">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+              障害特性に合わせた対応
+            </h2>
+            <p className="text-xl text-gray-600">
+              一人ひとりの特性を理解し、安心できる施術を提供します
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* 自閉症の方への対応 */}
+            <div className="flex flex-col">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 mb-4">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+                  🧩 自閉症の方への対応
+                </h3>
+                <div className="aspect-[9/16] bg-black rounded-lg overflow-hidden shadow-lg">
+                  <iframe
+                    src="https://www.youtube.com/embed/wvqWW66YtXs"
+                    title="自閉症の方への対応"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+              <p className="text-gray-600 text-sm text-center leading-relaxed">
+                見通しを持てる環境づくりと、ゆっくり丁寧なコミュニケーションを大切にしています
+              </p>
+            </div>
+
+            {/* 感覚過敏の方への対応 */}
+            <div className="flex flex-col">
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 mb-4">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+                  🎧 感覚過敏の方への対応
+                </h3>
+                <div className="aspect-[9/16] bg-black rounded-lg overflow-hidden shadow-lg">
+                  <iframe
+                    src="https://www.youtube.com/embed/SrEnY_7K2HU"
+                    title="感覚過敏の方への対応"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+              <p className="text-gray-600 text-sm text-center leading-relaxed">
+                音・光・触覚への配慮を行い、お客様のペースに合わせて進めます
+              </p>
+            </div>
+
+            {/* 車椅子の方への対応 */}
+            <div className="flex flex-col">
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 mb-4">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+                  ♿ 車椅子の方への対応
+                </h3>
+                <div className="aspect-[9/16] bg-black rounded-lg overflow-hidden shadow-lg">
+                  <iframe
+                    src="https://www.youtube.com/embed/tFQ3ab_1l5Q"
+                    title="車椅子の方への対応"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+              <p className="text-gray-600 text-sm text-center leading-relaxed">
+                バリアフリー環境で、安全に移動・施術を受けられるよう配慮しています
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Today's Shorts Section */}
       <ShortsToday />
 

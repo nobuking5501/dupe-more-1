@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { adminDb } from '@/lib/firebaseAdmin'
 
 interface Short {
   id: string
@@ -18,47 +17,50 @@ async function getShortsData(): Promise<{
   latest: Short | null
 }> {
   try {
-    console.log('📝 Fetching latest short directly from Firebase')
+    console.log('📝 Fetching latest short from API')
 
-    // Firestoreから最新のactive小話を取得
-    const storiesSnapshot = await adminDb
-      .collection('short_stories')
-      .where('status', '==', 'active')
-      .get()
+    // サーバーコンポーネントでは相対URLが使える
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000'
 
-    if (storiesSnapshot.empty) {
-      console.log('⚠️ No active short stories found')
-      return { latest: null }
-    }
+    const url = `${baseUrl}/api/short-stories/featured`
+    console.log(`Fetching from: ${url}`)
 
-    // JavaScriptでソートして最新の1件を取得
-    const stories = storiesSnapshot.docs.map(doc => ({
-      doc: doc,
-      createdAt: doc.data().createdAt?.toDate().getTime() || 0
-    }))
+    const featuredResponse = await fetch(url, {
+      cache: 'no-store',
+      next: { revalidate: 0 }
+    })
 
-    stories.sort((a, b) => b.createdAt - a.createdAt)
+    console.log(`Response status: ${featuredResponse.status}`)
 
-    const doc = stories[0].doc
-    const docData = doc.data()
+    if (featuredResponse.ok) {
+      const featured = await featuredResponse.json()
+      console.log('✅ Featured short fetched:', featured.title)
 
-    console.log('✅ Latest short story fetched:', docData.title)
-
-    // Convert to Short format
-    return {
-      latest: {
-        id: doc.id,
-        title: docData.title,
-        body_md: docData.content,
-        tags: [docData.emotionalTone],
-        status: 'published',
-        pii_risk_score: 0,
-        source_report_ids: [docData.sourceReportId || docData.source_report_id || ''],
-        created_at: docData.createdAt?.toDate().toISOString() || '',
-        published_at: docData.createdAt?.toDate().toISOString() || '',
-        updated_at: docData.updatedAt?.toDate().toISOString() || docData.createdAt?.toDate().toISOString() || ''
+      if (featured && featured.title) {
+        // Convert from featured API format to Short format
+        return {
+          latest: {
+            id: featured.id,
+            title: featured.title,
+            body_md: featured.content,
+            tags: [featured.emotionalTone],
+            status: 'published',
+            pii_risk_score: 0,
+            source_report_ids: [featured.sourceReportId],
+            created_at: featured.createdAt,
+            published_at: featured.createdAt,
+            updated_at: featured.updatedAt || featured.createdAt
+          }
+        }
       }
+    } else {
+      console.error(`❌ API returned error: ${featuredResponse.status}`)
     }
+
+    console.log('⚠️ No featured short available')
+    return { latest: null }
   } catch (error) {
     console.error('❌ Error fetching latest short:', error)
     return { latest: null }

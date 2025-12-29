@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebaseAdmin'
 import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { callClaudeGenerateAPI } from '@/lib/claude-generate'
 import { callClaudeCleanAPI } from '@/lib/claude-clean'
+import { generateTwitterShortStory, postToTwitter } from '@/lib/twitter-client'
 
 console.log('=== 管理画面 Firebase設定確認 ===')
 
@@ -441,6 +442,47 @@ export async function POST(request: Request) {
       }
     }
 
+    // X（Twitter）投稿（140文字以内の小話を自動投稿）
+    let twitterPostResult = null
+    try {
+      console.log('🐦 X投稿用の140文字小話を生成中...')
+      const twitterShortStory = await generateTwitterShortStory(newReport)
+
+      if (twitterShortStory) {
+        console.log('✅ Twitter小話生成成功:', twitterShortStory)
+
+        // Xに投稿
+        const postResult = await postToTwitter(twitterShortStory)
+
+        if (postResult && postResult.success) {
+          console.log('✅ X投稿成功:', postResult.tweetUrl)
+          twitterPostResult = postResult
+
+          // 投稿記録をFirestoreに保存
+          try {
+            await adminDb.collection('twitter_posts').add({
+              reportId: newReport.id,
+              reportDate: newReport.reportDate,
+              tweetId: postResult.tweetId,
+              tweetUrl: postResult.tweetUrl,
+              content: twitterShortStory,
+              createdAt: FieldValue.serverTimestamp()
+            })
+            console.log('✅ X投稿記録を保存しました')
+          } catch (recordError) {
+            console.error('⚠️ X投稿記録保存エラー:', recordError)
+          }
+        } else if (postResult) {
+          console.error('❌ X投稿失敗:', postResult.error)
+        }
+      } else {
+        console.log('⚠️ Twitter小話の生成に失敗しました')
+      }
+    } catch (twitterError) {
+      console.error('❌ X投稿処理エラー:', twitterError)
+      // エラーでも処理は継続（X投稿は必須機能ではない）
+    }
+
     // ブログ自動生成を試みる（未使用の日報が2件以上ある場合）
     console.log('📰 ブログ自動生成を試みます...')
     const generatedBlog = await autoGenerateBlog()
@@ -454,7 +496,8 @@ export async function POST(request: Request) {
     const response = {
       report: newReport,
       generatedStory: generatedStory,
-      generatedBlog: generatedBlog
+      generatedBlog: generatedBlog,
+      twitterPost: twitterPostResult
     }
 
     return NextResponse.json(response)

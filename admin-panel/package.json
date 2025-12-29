@@ -16,7 +16,8 @@
     "firebase-admin": "^13.5.0",
     "next": "14.2.5",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "twitter-api-v2": "^1.28.0"
   },
   "devDependencies": {
     "@types/node": "^20",

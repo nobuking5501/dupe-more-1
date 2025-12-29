@@ -85,7 +85,7 @@ export default function CompanyPage() {
                   </tr>
                   <tr className="border-b border-gray-100">
                     <td className="py-3 pr-4 font-medium text-gray-700">代表者</td>
-                    <td className="py-3 text-gray-900">代表 田中</td>
+                    <td className="py-3 text-gray-900">代表 渡邊</td>
                   </tr>
                 </tbody>
               </table>

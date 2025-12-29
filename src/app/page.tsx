@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import ShortsToday from '@/components/ShortsToday'
 
+// キャッシュを無効化して常に最新の小話を表示
+export const revalidate = 0
+
 export default function Home() {
   return (
     <>

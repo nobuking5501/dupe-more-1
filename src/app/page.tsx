@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import ShortsToday from '@/components/ShortsToday'
 
-// キャッシュを無効化して常に最新の小話を表示
+// 動的レンダリングを強制して常に最新の小話を表示
+export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default function Home() {

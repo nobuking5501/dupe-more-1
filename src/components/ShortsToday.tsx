@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 interface Short {
   id: string
@@ -13,62 +16,46 @@ interface Short {
   updated_at: string
 }
 
-async function getShortsData(): Promise<{
-  latest: Short | null
-}> {
-  try {
-    console.log('📝 Fetching latest short from API')
+export default function ShortsToday() {
+  const [latest, setLatest] = useState<Short | null>(null)
+  const [loading, setLoading] = useState(true)
 
-    // サーバーコンポーネントでは相対URLが使える
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000'
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        console.log('📝 Fetching latest short from client')
+        const response = await fetch('/api/short-stories/featured', {
+          cache: 'no-store'
+        })
 
-    const url = `${baseUrl}/api/short-stories/featured`
-    console.log(`Fetching from: ${url}`)
+        if (response.ok) {
+          const featured = await response.json()
+          console.log('✅ Featured short fetched:', featured.title)
 
-    const featuredResponse = await fetch(url, {
-      cache: 'no-store',
-      next: { revalidate: 0 }
-    })
-
-    console.log(`Response status: ${featuredResponse.status}`)
-
-    if (featuredResponse.ok) {
-      const featured = await featuredResponse.json()
-      console.log('✅ Featured short fetched:', featured.title)
-
-      if (featured && featured.title) {
-        // Convert from featured API format to Short format
-        return {
-          latest: {
-            id: featured.id,
-            title: featured.title,
-            body_md: featured.content,
-            tags: [featured.emotionalTone],
-            status: 'published',
-            pii_risk_score: 0,
-            source_report_ids: [featured.sourceReportId],
-            created_at: featured.createdAt,
-            published_at: featured.createdAt,
-            updated_at: featured.updatedAt || featured.createdAt
+          if (featured && featured.title) {
+            setLatest({
+              id: featured.id,
+              title: featured.title,
+              body_md: featured.content,
+              tags: [featured.emotionalTone],
+              status: 'published',
+              pii_risk_score: 0,
+              source_report_ids: [featured.sourceReportId],
+              created_at: featured.createdAt,
+              published_at: featured.createdAt,
+              updated_at: featured.updatedAt || featured.createdAt
+            })
           }
         }
+      } catch (error) {
+        console.error('❌ Error fetching latest short:', error)
+      } finally {
+        setLoading(false)
       }
-    } else {
-      console.error(`❌ API returned error: ${featuredResponse.status}`)
     }
 
-    console.log('⚠️ No featured short available')
-    return { latest: null }
-  } catch (error) {
-    console.error('❌ Error fetching latest short:', error)
-    return { latest: null }
-  }
-}
-
-export default async function ShortsToday() {
-  const { latest } = await getShortsData()
+    fetchData()
+  }, [])
 
   // Add emotion icon helper
   const getEmotionIcon = (tags: string[]) => {

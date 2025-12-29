@@ -21,9 +21,8 @@ async function getShortsData(): Promise<{
     console.log('Fetching latest short from /api/short-stories/featured')
 
     // Vercel本番環境では絶対URLが必要
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
     const featuredResponse = await fetch(`${baseUrl}/api/short-stories/featured`, {
       next: { revalidate: 0 },

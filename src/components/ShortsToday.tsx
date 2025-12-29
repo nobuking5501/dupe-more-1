@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { adminDb } from '@/lib/firebaseAdmin'
 
 interface Short {
   id: string
@@ -17,45 +18,49 @@ async function getShortsData(): Promise<{
   latest: Short | null
 }> {
   try {
-    // Use featured short stories API (already using Firebase)
-    console.log('Fetching latest short from /api/short-stories/featured')
+    console.log('📝 Fetching latest short directly from Firebase')
 
-    // Vercel本番環境では絶対URLが必要
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+    // Firestoreから最新のactive小話を取得
+    const storiesSnapshot = await adminDb
+      .collection('short_stories')
+      .where('status', '==', 'active')
+      .get()
 
-    const featuredResponse = await fetch(`${baseUrl}/api/short-stories/featured`, {
-      next: { revalidate: 0 },
-      cache: 'no-store'
-    })
-
-    if (featuredResponse.ok) {
-      const featured = await featuredResponse.json()
-      console.log('Featured short fetched:', featured)
-
-      if (featured && featured.title) {
-        // Convert from featured API format to Short format
-        return {
-          latest: {
-            id: featured.id,
-            title: featured.title,
-            body_md: featured.content,
-            tags: [featured.emotionalTone],
-            status: 'published',
-            pii_risk_score: 0,
-            source_report_ids: [featured.sourceReportId],
-            created_at: featured.createdAt,
-            published_at: featured.createdAt,
-            updated_at: featured.updatedAt || featured.createdAt
-          }
-        }
-      }
+    if (storiesSnapshot.empty) {
+      console.log('⚠️ No active short stories found')
+      return { latest: null }
     }
 
-    console.log('No featured short available')
-    return { latest: null }
+    // JavaScriptでソートして最新の1件を取得
+    const stories = storiesSnapshot.docs.map(doc => ({
+      doc: doc,
+      createdAt: doc.data().createdAt?.toDate().getTime() || 0
+    }))
+
+    stories.sort((a, b) => b.createdAt - a.createdAt)
+
+    const doc = stories[0].doc
+    const docData = doc.data()
+
+    console.log('✅ Latest short story fetched:', docData.title)
+
+    // Convert to Short format
+    return {
+      latest: {
+        id: doc.id,
+        title: docData.title,
+        body_md: docData.content,
+        tags: [docData.emotionalTone],
+        status: 'published',
+        pii_risk_score: 0,
+        source_report_ids: [docData.sourceReportId || docData.source_report_id || ''],
+        created_at: docData.createdAt?.toDate().toISOString() || '',
+        published_at: docData.createdAt?.toDate().toISOString() || '',
+        updated_at: docData.updatedAt?.toDate().toISOString() || docData.createdAt?.toDate().toISOString() || ''
+      }
+    }
   } catch (error) {
-    console.error('Error fetching latest short:', error)
+    console.error('❌ Error fetching latest short:', error)
     return { latest: null }
   }
 }

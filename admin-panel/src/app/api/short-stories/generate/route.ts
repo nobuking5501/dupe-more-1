@@ -73,7 +73,7 @@ async function generateShortStory(reportData: any) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         messages: [{
           role: 'user',
@@ -141,14 +141,36 @@ async function generateShortStory(reportData: any) {
 
 export async function POST(request: Request) {
   try {
-    const requestData = await request.json()
-    const targetDate = requestData.date
+    const requestData = await request.json().catch(() => ({}))
+    let targetDate = requestData.date
 
+    // 日付が指定されていない場合は、最新の日報の日付を取得
     if (!targetDate) {
-      return NextResponse.json(
-        { error: '日付は必須です' },
-        { status: 400 }
-      )
+      console.log('📅 日付未指定 - 最新の日報を検索...')
+      const latestReportsSnapshot = await adminDb
+        .collection('daily_reports')
+        .orderBy('reportDate', 'desc')
+        .limit(1)
+        .get()
+
+      if (latestReportsSnapshot.empty) {
+        return NextResponse.json(
+          { error: '日報が見つかりません。先に日報を作成してください。' },
+          { status: 404 }
+        )
+      }
+
+      const latestReport = latestReportsSnapshot.docs[0].data() as { reportDate?: string }
+      targetDate = latestReport.reportDate
+
+      if (!targetDate) {
+        return NextResponse.json(
+          { error: '最新の日報に日付情報がありません' },
+          { status: 400 }
+        )
+      }
+
+      console.log('✅ 最新の日報を使用:', targetDate)
     }
 
     console.log('📝 小話生成リクエスト受信 - 対象日:', targetDate)
@@ -178,22 +200,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errorMsg }, { status: 404 })
     }
 
-    // 有効なデータがある日報を選択（空でないもの）
-    const validReport = reports.find(report =>
-      report.customerAttributes &&
-      report.customerAttributes.trim() !== '' &&
-      report.visitReasonPurpose &&
-      report.visitReasonPurpose.trim() !== ''
-    )
+    // 最初の日報を使用（データがあってもなくても生成を試みる）
+    const report = reports[0]
 
-    if (!validReport) {
-      const errorMsg = `有効な日報データが見つかりません: ${targetDate}`
-      console.error('❌', errorMsg)
-      await logMessage('error', errorMsg)
-      return NextResponse.json({ error: errorMsg }, { status: 404 })
+    // 警告: データが不完全な場合
+    if (!report.customerAttributes || !report.customerAttributes.trim()) {
+      console.log('⚠️ お客様の属性データが空です')
     }
-
-    const report = validReport
+    if (!report.visitReasonPurpose || !report.visitReasonPurpose.trim()) {
+      console.log('⚠️ 来店理由データが空です')
+    }
 
     // 既存の小話があるかチェック（冪等性） - 再生成のため一時的に無効化
     const existingStoriesSnapshot = await adminDb

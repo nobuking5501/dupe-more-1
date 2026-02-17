@@ -24,4 +24,6 @@ Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
+npm-debug.log**.txt
+FIREBASE_KEY_NO_QUOTES.txt
+VERCEL_FIREBASE_PRIVATE_KEY.txt

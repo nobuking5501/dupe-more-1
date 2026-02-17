@@ -66,8 +66,27 @@ function generateSlug(title: string): string {
 
 export async function POST(request: Request) {
   try {
-    const requestData = await request.json()
-    const targetDate = requestData.date || new Date().toISOString().split('T')[0]
+    const requestData = await request.json().catch(() => ({}))
+    let targetDate = requestData.date
+
+    // 日付が指定されていない場合は、最新の日報を使用
+    if (!targetDate) {
+      console.log('📅 日付未指定 - 最新の日報を使用')
+      const latestReportsSnapshot = await adminDb
+        .collection('daily_reports')
+        .orderBy('reportDate', 'desc')
+        .limit(1)
+        .get()
+
+      if (!latestReportsSnapshot.empty) {
+        const latestReport = latestReportsSnapshot.docs[0].data() as { reportDate?: string }
+        targetDate = latestReport.reportDate
+        console.log('✅ 最新の日報の日付を使用:', targetDate)
+      } else {
+        targetDate = new Date().toISOString().split('T')[0]
+        console.log('⚠️ 日報がないため、今日の日付を使用:', targetDate)
+      }
+    }
 
     console.log('📝 ブログ生成リクエスト受信 - 対象日:', targetDate)
     await logMessage('info', `ブログ生成開始: ${targetDate}`)
@@ -176,30 +195,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errorMsg }, { status: 404 })
     }
 
-    // 必要な小話データを取得
-    const newerStorySnapshot = await adminDb
-      .collection('short_stories')
-      .where('reportDate', '==', newerDateString)
-      .limit(1)
-      .get()
-
-    const olderStorySnapshot = await adminDb
-      .collection('short_stories')
-      .where('reportDate', '==', olderDateString)
-      .limit(1)
-      .get()
-
-    if (newerStorySnapshot.empty || olderStorySnapshot.empty) {
-      const missingStoryDates = []
-      if (newerStorySnapshot.empty) missingStoryDates.push(newerDateString)
-      if (olderStorySnapshot.empty) missingStoryDates.push(olderDateString)
-
-      const errorMsg = `必要な小話が見つかりません: ${missingStoryDates.join(', ')}`
-      console.error('❌', errorMsg)
-      await logMessage('error', errorMsg)
-      return NextResponse.json({ error: errorMsg }, { status: 404 })
-    }
-
+    // 小話データの存在は任意（ブログ生成には日報データのみ使用）
+    console.log('✅ 日報データが揃いました - ブログ生成を開始します')
     console.log('🤖 2段階Claude APIでブログ生成中...')
     const blogData = await generateBlogPostTwoPhase(newerReport, olderReport)
 

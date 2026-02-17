@@ -90,7 +90,7 @@ async function generateShortStory(reportData: any) {
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
+          model: 'claude-sonnet-4-5',
           max_tokens: 1000,
           messages: [{
             role: 'user',
@@ -340,6 +340,100 @@ export async function GET() {
   }
 }
 
+export async function PUT(request: Request) {
+  try {
+    const data = await request.json()
+
+    console.log('✏️ 日報更新データを受信:', {
+      id: data.id,
+      staff_name: data.staff_name,
+      report_date: data.report_date,
+    })
+
+    // 入力データ検証
+    if (!data.id) {
+      console.error('❌ 日報IDが不足しています')
+      return NextResponse.json(
+        { error: '日報IDは必須です' },
+        { status: 400 }
+      )
+    }
+
+    if (!data.staff_name || !data.report_date) {
+      console.error('❌ 必須項目が不足しています')
+      return NextResponse.json(
+        { error: 'スタッフ名と報告日は必須です' },
+        { status: 400 }
+      )
+    }
+
+    // 既存の日報を取得
+    const reportRef = adminDb.collection('daily_reports').doc(data.id)
+    const reportDoc = await reportRef.get()
+
+    if (!reportDoc.exists) {
+      console.error('❌ 日報が見つかりません:', data.id)
+      return NextResponse.json(
+        { error: '指定された日報が見つかりません' },
+        { status: 404 }
+      )
+    }
+
+    // 日付が変更された場合、同じ日付の他の日報が存在しないかチェック
+    const oldData = reportDoc.data()
+    if (oldData?.reportDate !== data.report_date) {
+      const existingReports = await adminDb
+        .collection('daily_reports')
+        .where('reportDate', '==', data.report_date)
+        .get()
+
+      if (!existingReports.empty) {
+        console.log('⚠️ 同じ日付の日報が既に存在します:', data.report_date)
+        return NextResponse.json(
+          { error: `${data.report_date}の日報は既に登録されています。同じ日付の日報は1日1件までです。` },
+          { status: 400 }
+        )
+      }
+    }
+
+    console.log('💾 Firestoreの日報を更新中...')
+
+    // Firestoreの日報を更新（キャメルケースに変換）
+    const updateData = {
+      staffName: data.staff_name,
+      reportDate: data.report_date,
+      weatherTemperature: data.weather_temperature,
+      customerAttributes: data.customer_attributes,
+      visitReasonPurpose: data.visit_reason_purpose,
+      treatmentDetails: data.treatment_details,
+      customerBeforeTreatment: data.customer_before_treatment,
+      customerAfterTreatment: data.customer_after_treatment,
+      salonAtmosphere: data.salon_atmosphere,
+      insightsInnovations: data.insights_innovations,
+      kanaePersonalThoughts: data.kanae_personal_thoughts,
+      updatedAt: FieldValue.serverTimestamp()
+    }
+
+    await reportRef.update(updateData)
+
+    const updatedReport = {
+      id: data.id,
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    }
+
+    console.log('✅ 日報をFirestoreで更新しました:', data.id)
+
+    return NextResponse.json({
+      report: updatedReport,
+      message: '日報を更新しました'
+    })
+  } catch (error) {
+    console.error('日報更新エラー:', error)
+    return NextResponse.json({ error: '日報の更新に失敗しました' }, { status: 500 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const data = await request.json()
@@ -404,43 +498,90 @@ export async function POST(request: Request) {
 
     console.log('✅ 日報をFirestoreに保存しました:', newReport.id)
 
-    // 日報投稿後に小話を自動生成
-    console.log('小話生成を開始します...')
-    const generatedStory = await generateShortStory(newReport)
+    // 小話がない全ての日報に対して小話を自動生成
+    console.log('📚 小話がない日報を確認中...')
 
-    if (generatedStory) {
-      console.log('小話生成成功:', generatedStory.title)
-    } else {
-      console.log('小話生成失敗')
+    // 全ての日報を取得
+    const allReportsSnapshot = await adminDb
+      .collection('daily_reports')
+      .orderBy('reportDate', 'desc')
+      .get()
+
+    const allReports = allReportsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
+    // 全ての小話を取得
+    const allStoriesSnapshot = await adminDb
+      .collection('short_stories')
+      .get()
+
+    const storyReportDates = new Set(
+      allStoriesSnapshot.docs.map(doc => doc.data().reportDate)
+    )
+
+    // 小話がない日報を特定
+    const reportsWithoutStories = allReports.filter((report: any) =>
+      !storyReportDates.has(report.reportDate)
+    )
+
+    console.log(`✅ 小話が必要な日報: ${reportsWithoutStories.length}件`)
+
+    // 小話がない全ての日報に対して小話を生成
+    const generatedStories = []
+    for (const report of reportsWithoutStories) {
+      console.log(`📝 小話生成中: ${report.reportDate}`)
+      const generatedStory = await generateShortStory(report)
+
+      if (generatedStory) {
+        console.log(`✅ 小話生成成功: ${generatedStory.title}`)
+
+        // Firestoreに保存
+        try {
+          const storyRef = adminDb.collection('short_stories').doc()
+          await storyRef.set(generatedStory)
+          console.log(`💾 小話保存完了: ${storyRef.id}`)
+          generatedStories.push({
+            id: storyRef.id,
+            title: generatedStory.title,
+            reportDate: report.reportDate
+          })
+        } catch (saveError) {
+          console.error(`❌ 小話保存エラー (${report.reportDate}):`, saveError)
+        }
+      } else {
+        console.log(`⚠️ 小話生成失敗: ${report.reportDate}`)
+      }
     }
 
-    // 生成された小話をFirestoreに保存
-    if (generatedStory) {
-      console.log('💾 小話をFirestoreに保存中...')
-
+    // 最新の小話をisFeatured=trueに設定
+    if (generatedStories.length > 0) {
       try {
-        // 既存の小話のisFeaturedをfalseに更新
-        const storiesSnapshot = await adminDb
+        // 全ての小話のisFeaturedをfalseに
+        const allStoriesSnapshot2 = await adminDb
           .collection('short_stories')
           .where('isFeatured', '==', true)
           .get()
 
         const batch = adminDb.batch()
-        storiesSnapshot.docs.forEach(doc => {
+        allStoriesSnapshot2.docs.forEach(doc => {
           batch.update(doc.ref, { isFeatured: false })
         })
 
-        // 新しい小話を追加
-        const storyRef = adminDb.collection('short_stories').doc()
-        batch.set(storyRef, generatedStory)
+        // 最新の小話をisFeatured=trueに
+        const latestStory = generatedStories[0]
+        const latestStoryRef = adminDb.collection('short_stories').doc(latestStory.id)
+        batch.update(latestStoryRef, { isFeatured: true })
 
         await batch.commit()
-
-        console.log('✅ 小話をFirestoreに保存しました:', storyRef.id)
-      } catch (saveError) {
-        console.error('❌ 小話保存中に予期しないエラー:', saveError)
+        console.log(`✅ ${latestStory.title} をフィーチャーに設定`)
+      } catch (featureError) {
+        console.error('❌ isFeatured更新エラー:', featureError)
       }
     }
+
+    console.log(`🎉 小話生成完了: ${generatedStories.length}件`)
 
     // X（Twitter）投稿（140文字以内の小話を自動投稿）
     let twitterPostResult = null
@@ -495,9 +636,13 @@ export async function POST(request: Request) {
 
     const response = {
       report: newReport,
-      generatedStory: generatedStory,
+      generatedStories: generatedStories,
       generatedBlog: generatedBlog,
-      twitterPost: twitterPostResult
+      twitterPost: twitterPostResult,
+      summary: {
+        storiesGenerated: generatedStories.length,
+        blogGenerated: generatedBlog ? 1 : 0
+      }
     }
 
     return NextResponse.json(response)

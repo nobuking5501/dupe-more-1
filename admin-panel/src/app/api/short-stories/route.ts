@@ -8,18 +8,26 @@ export async function GET() {
   try {
     console.log('📥 小話データをFirestoreから取得中...')
 
+    // Firestoreの複合インデックス不要にするため、全件取得してJavaScript側でフィルタ・ソート
     const storiesSnapshot = await adminDb
       .collection('short_stories')
-      .where('status', '==', 'active')
-      .orderBy('reportDate', 'desc')
       .get()
 
-    const stories = storiesSnapshot.docs.map(doc => ({
+    const allStories = storiesSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate().toISOString(),
       updatedAt: doc.data().updatedAt?.toDate().toISOString(),
     }))
+
+    // JavaScript側でフィルタとソート
+    const stories = allStories
+      .filter((story: any) => story.status === 'active')
+      .sort((a: any, b: any) => {
+        const dateA = new Date(a.reportDate || a.createdAt || 0).getTime()
+        const dateB = new Date(b.reportDate || b.createdAt || 0).getTime()
+        return dateB - dateA // 降順
+      })
 
     console.log('✅ 小話取得成功:', stories.length, '件')
     return NextResponse.json(stories)

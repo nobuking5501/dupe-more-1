@@ -21,10 +21,11 @@ interface BlogGenerationResult {
 }
 
 export async function callClaudeGenerateAPI(reportPair: ReportPair, useKey2 = false): Promise<BlogGenerationResult> {
-  const CLAUDE_KEY = useKey2 ? process.env.CLAUDE_KEY2 : process.env.CLAUDE_KEY1
-  
+  // 小話生成と同じAPIキーを使用（動作確認済み）
+  const CLAUDE_KEY = process.env.ANTHROPIC_API_KEY
+
   if (!CLAUDE_KEY) {
-    throw new Error(`${useKey2 ? 'CLAUDE_KEY2' : 'CLAUDE_KEY1'}環境変数が設定されていません`)
+    throw new Error('ANTHROPIC_API_KEY環境変数が設定されていません')
   }
 
   const systemPrompt = `あなたは、障害者専門サロン「Dupe & More」の編集責任者です。
@@ -70,7 +71,7 @@ report_pair = ${JSON.stringify(reportPair, null, 2)}
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-sonnet-4-5',
         max_tokens: 6000,
         temperature: 0.3,
         messages: [{

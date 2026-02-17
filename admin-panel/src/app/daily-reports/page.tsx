@@ -25,6 +25,7 @@ export default function DailyReportsPage() {
   const [fetchLoading, setFetchLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedReport, setExpandedReport] = useState<string | null>(null)
+  const [editingReport, setEditingReport] = useState<DailyReport | null>(null)
   const [formData, setFormData] = useState({
     staff_name: 'かなえ',
     report_date: new Date().toISOString().split('T')[0],
@@ -68,25 +69,72 @@ export default function DailyReportsPage() {
     }
   }
 
+  const handleEditClick = (report: DailyReport) => {
+    setEditingReport(report)
+    setFormData({
+      staff_name: report.staff_name,
+      report_date: report.report_date,
+      weather_temperature: report.weather_temperature || '',
+      customer_attributes: report.customer_attributes || '',
+      visit_reason_purpose: report.visit_reason_purpose || '',
+      treatment_details: report.treatment_details || '',
+      customer_before_treatment: report.customer_before_treatment || '',
+      customer_after_treatment: report.customer_after_treatment || '',
+      salon_atmosphere: report.salon_atmosphere || '',
+      insights_innovations: report.insights_innovations || '',
+      kanae_personal_thoughts: report.kanae_personal_thoughts || ''
+    })
+    setShowForm(true)
+    setExpandedReport(null)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingReport(null)
+    setFormData({
+      staff_name: 'かなえ',
+      report_date: new Date().toISOString().split('T')[0],
+      weather_temperature: '',
+      customer_attributes: '',
+      visit_reason_purpose: '',
+      treatment_details: '',
+      customer_before_treatment: '',
+      customer_after_treatment: '',
+      salon_atmosphere: '',
+      insights_innovations: '',
+      kanae_personal_thoughts: ''
+    })
+    setShowForm(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    
+
     try {
-      const response = await fetch('/api/daily-reports', {
-        method: 'POST',
+      const isEditing = editingReport !== null
+      const url = '/api/daily-reports'
+      const method = isEditing ? 'PUT' : 'POST'
+      const bodyData = isEditing ? { ...formData, id: editingReport.id } : formData
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(bodyData)
       })
-      
+
       if (response.ok) {
         const result = await response.json()
-        if (result.generatedStory) {
-          alert(`日報が保存され、小話「${result.generatedStory.title}」が自動生成されました！`)
+
+        if (isEditing) {
+          alert('日報が更新されました！')
         } else {
-          alert('日報が保存されました！')
+          if (result.generatedStory) {
+            alert(`日報が保存され、小話「${result.generatedStory.title}」が自動生成されました！`)
+          } else {
+            alert('日報が保存されました！')
+          }
         }
 
         setFormData({
@@ -102,6 +150,7 @@ export default function DailyReportsPage() {
           insights_innovations: '',
           kanae_personal_thoughts: ''
         })
+        setEditingReport(null)
         setShowForm(false)
         fetchReports()
       } else {
@@ -112,7 +161,7 @@ export default function DailyReportsPage() {
       console.error('送信エラー:', error)
       alert('送信エラーが発生しました。')
     }
-    
+
     setLoading(false)
   }
 
@@ -130,7 +179,23 @@ export default function DailyReportsPage() {
               ← 管理画面に戻る
             </Link>
             <button
-              onClick={() => setShowForm(true)}
+              onClick={() => {
+                setEditingReport(null)
+                setFormData({
+                  staff_name: 'かなえ',
+                  report_date: new Date().toISOString().split('T')[0],
+                  weather_temperature: '',
+                  customer_attributes: '',
+                  visit_reason_purpose: '',
+                  treatment_details: '',
+                  customer_before_treatment: '',
+                  customer_after_treatment: '',
+                  salon_atmosphere: '',
+                  insights_innovations: '',
+                  kanae_personal_thoughts: ''
+                })
+                setShowForm(true)
+              }}
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
               新規日報入力
@@ -142,9 +207,11 @@ export default function DailyReportsPage() {
         {showForm && (
           <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">新規日報入力</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {editingReport ? '日報編集' : '新規日報入力'}
+              </h2>
               <button
-                onClick={() => setShowForm(false)}
+                onClick={handleCancelEdit}
                 className="text-gray-400 hover:text-gray-600"
               >
                 ✕
@@ -292,7 +359,7 @@ export default function DailyReportsPage() {
               <div className="flex justify-end space-x-4">
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={handleCancelEdit}
                   className="px-6 py-2 text-gray-600 hover:text-gray-900"
                 >
                   キャンセル
@@ -302,7 +369,7 @@ export default function DailyReportsPage() {
                   disabled={loading}
                   className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
-                  {loading ? '保存中...' : '保存'}
+                  {loading ? (editingReport ? '更新中...' : '保存中...') : (editingReport ? '更新' : '保存')}
                 </button>
               </div>
             </form>
@@ -410,6 +477,17 @@ export default function DailyReportsPage() {
                 {/* 詳細表示 */}
                 {expandedReport === report.id && (
                   <div className="px-6 pb-6 bg-gray-50 border-t">
+                    <div className="flex justify-end mt-4 mb-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditClick(report)
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                      >
+                        この日報を編集
+                      </button>
+                    </div>
                     <div className="grid md:grid-cols-2 gap-6 mt-4">
                       <div className="space-y-4">
                         <div>

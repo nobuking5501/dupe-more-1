@@ -53,10 +53,22 @@ export default function ShortStoriesPage() {
           'Content-Type': 'application/json',
         }
       })
-      
+
       if (response.ok) {
         const newStory = await response.json()
-        setStories([newStory, ...stories])
+        // 既存の小話を更新または新規追加
+        setStories(prevStories => {
+          const existingIndex = prevStories.findIndex(s => s.id === newStory.id)
+          if (existingIndex >= 0) {
+            // 既存の小話を更新
+            const updated = [...prevStories]
+            updated[existingIndex] = newStory
+            return updated
+          } else {
+            // 新規の小話を先頭に追加
+            return [newStory, ...prevStories]
+          }
+        })
         setSelectedStory(newStory)
         alert('最新の日報から小話が生成されました！')
       } else {

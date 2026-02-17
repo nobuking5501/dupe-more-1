@@ -12,10 +12,11 @@ interface CleanResponse {
 }
 
 export async function callClaudeCleanAPI(body: string): Promise<string> {
-  const CLAUDE_CLEAN_KEY = process.env.CLAUDE_CLEAN_KEY
-  
+  // 小話生成と同じAPIキーを使用（動作確認済み）
+  const CLAUDE_CLEAN_KEY = process.env.ANTHROPIC_API_KEY
+
   if (!CLAUDE_CLEAN_KEY) {
-    throw new Error('CLAUDE_CLEAN_KEY環境変数が設定されていません')
+    throw new Error('ANTHROPIC_API_KEY環境変数が設定されていません')
   }
 
   const systemPrompt = `あなたは清書専用アシスタントです。
@@ -53,7 +54,7 @@ ${body}`
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-sonnet-4-5',
         max_tokens: 4000,
         temperature: 0.2,
         messages: [{

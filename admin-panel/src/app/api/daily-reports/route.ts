@@ -510,7 +510,7 @@ export async function POST(request: Request) {
     const allReports = allReportsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    }))
+    })) as Array<{ id: string; reportDate?: string; [key: string]: any }>
 
     // 全ての小話を取得
     const allStoriesSnapshot = await adminDb

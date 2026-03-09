@@ -95,16 +95,26 @@ export async function POST(request: Request) {
     console.log('📝 ブログ生成リクエスト受信 - 対象日:', targetDate || '未指定')
     await logMessage('info', `ブログ生成開始: ${targetDate || '未指定'}`)
 
-    // 既存ブログから使用済み日付を収集
+    // 既存ブログから使用済み日報IDを収集（IDベース管理）
     const existingBlogsSnapshot = await adminDb.collection('blog_posts').get()
-    const usedDates = new Set<string>()
+    const usedReportIds = new Set<string>()
+    const oldDateLookups: string[] = []
+
     existingBlogsSnapshot.docs.forEach(doc => {
       const data = doc.data()
-      if (data.newerDate) usedDates.add(data.newerDate)
-      if (data.olderDate) usedDates.add(data.olderDate)
+      if (data.newerReportId) usedReportIds.add(data.newerReportId)
+      if (data.olderReportId) usedReportIds.add(data.olderReportId)
+      if (!data.newerReportId && data.originalReportId) usedReportIds.add(data.originalReportId)
+      if (!data.olderReportId && data.olderDate) oldDateLookups.push(data.olderDate)
     })
 
-    // 全日報を取得
+    for (const date of oldDateLookups) {
+      const snap = await adminDb.collection('daily_reports')
+        .where('reportDate', '==', date).limit(1).get()
+      if (!snap.empty) usedReportIds.add(snap.docs[0].id)
+    }
+
+    // 全日報を取得（IDベースで未使用を判定）
     const reportsSnapshot = await adminDb
       .collection('daily_reports')
       .orderBy('reportDate', 'desc')
@@ -113,110 +123,39 @@ export async function POST(request: Request) {
     const allReports = reportsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
-    })) as Array<{ id: string; reportDate?: string; [key: string]: any }>
+    })) as Array<{ id: string; reportDate?: string; customerAttributes?: string; [key: string]: any }>
 
-    // 重複日付を除去した全日付リスト（新しい順）
-    const uniqueDates = Array.from(new Set(allReports.map(r => r.reportDate).filter(Boolean) as string[]))
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+    // 未使用かつ有効な日報（IDで判定・同日複数もすべて対象）
+    const unusedReports = allReports.filter(r =>
+      r.reportDate && !usedReportIds.has(r.id) && r.customerAttributes?.trim()
+    )
 
-    // 未使用日付リスト（新しい順）
-    const unusedDates = uniqueDates.filter(d => !usedDates.has(d))
+    console.log('📋 全日報:', allReports.length, '件 / 未使用:', unusedReports.length, '件')
 
-    console.log('📅 全日付:', uniqueDates.length, '件 / 未使用:', unusedDates.length, '件')
+    let newerReport: (typeof unusedReports)[0] | null = null
+    let olderReport: (typeof unusedReports)[0] | null = null
 
-    let newerDateString: string
-    let olderDateString: string | null = null
+    if (targetDate) {
+      // 日付指定 → その日付の未使用レポートから1件、その次の未使用レポートをペアに
+      newerReport = unusedReports.find(r => r.reportDate === targetDate) || null
+      if (newerReport) {
+        olderReport = unusedReports.find(r => r.id !== newerReport!.id) || null
+      }
+    }
 
-    if (!targetDate) {
-      // 日付未指定 → 未使用の最新2件を使用
-      if (unusedDates.length < 2) {
-        const errorMsg = `未使用の日報が${unusedDates.length}件しかありません。2件以上必要です。`
+    if (!newerReport || !olderReport) {
+      // 日付未指定 or 指定日で見つからない → 未使用の最新2件を使用
+      if (unusedReports.length < 2) {
+        const errorMsg = `未使用の日報が${unusedReports.length}件しかありません。2件以上必要です。`
         console.error('❌', errorMsg)
         await logMessage('error', errorMsg)
         return NextResponse.json({ error: errorMsg }, { status: 400 })
       }
-      newerDateString = unusedDates[0]
-      olderDateString = unusedDates[1]
-    } else {
-      // 日付指定 → 指定日 + その次に古い未使用日付をペアにする
-      newerDateString = targetDate
-      const targetIndex = uniqueDates.indexOf(targetDate)
-      if (targetIndex >= 0) {
-        // 指定日より古い未使用日付を探す
-        const olderUnused = uniqueDates.slice(targetIndex + 1).find(d => !usedDates.has(d))
-        olderDateString = olderUnused || null
-      }
-      if (!olderDateString) {
-        // 見つからなければ未使用の最新2件にフォールバック
-        if (unusedDates.length >= 2) {
-          newerDateString = unusedDates[0]
-          olderDateString = unusedDates[1]
-        }
-      }
+      newerReport = unusedReports[0]
+      olderReport = unusedReports[1]
     }
 
-    console.log('📅 選択された日付ペア:', newerDateString, '&', olderDateString)
-
-    if (!olderDateString) {
-      const errorMsg = `ペアとなる日報が見つかりません`
-      console.error('❌', errorMsg)
-      await logMessage('error', errorMsg)
-      return NextResponse.json({ error: errorMsg }, { status: 400 })
-    }
-
-    console.log('📅 日付ペア:', newerDateString, '&', olderDateString)
-
-    // 既存のブログがあるかチェック（冪等性）
-    const existingBlogSnapshot = await adminDb
-      .collection('blog_posts')
-      .where('newerDate', '==', newerDateString)
-      .where('olderDate', '==', olderDateString)
-      .limit(1)
-      .get()
-
-    if (!existingBlogSnapshot.empty) {
-      const existingBlog = {
-        id: existingBlogSnapshot.docs[0].id,
-        ...existingBlogSnapshot.docs[0].data()
-      } as { id: string; title?: string; [key: string]: any }
-      console.log('✅ 同じ日付ペアのブログが既に存在します:', existingBlog.title)
-      await logMessage('info', `既存ブログを返却: ${existingBlog.title}`, { blogId: existingBlog.id })
-      return NextResponse.json(existingBlog)
-    }
-
-    // 必要な日報データを取得（複数ある場合は最初の1件を使用）
-    const newerReportsSnapshot = await adminDb
-      .collection('daily_reports')
-      .where('reportDate', '==', newerDateString)
-      .limit(1)
-      .get()
-
-    const olderReportsSnapshot = await adminDb
-      .collection('daily_reports')
-      .where('reportDate', '==', olderDateString)
-      .limit(1)
-      .get()
-
-    const newerReport = !newerReportsSnapshot.empty ? {
-      id: newerReportsSnapshot.docs[0].id,
-      ...newerReportsSnapshot.docs[0].data()
-    } as { id: string; reportDate?: string; [key: string]: any } : null
-
-    const olderReport = !olderReportsSnapshot.empty ? {
-      id: olderReportsSnapshot.docs[0].id,
-      ...olderReportsSnapshot.docs[0].data()
-    } as { id: string; reportDate?: string; [key: string]: any } : null
-
-    if (!newerReport || !olderReport) {
-      const missingDates = []
-      if (!newerReport) missingDates.push(newerDateString)
-      if (!olderReport) missingDates.push(olderDateString)
-
-      const errorMsg = `必要な日報が見つかりません: ${missingDates.join(', ')}`
-      console.error('❌', errorMsg)
-      await logMessage('error', errorMsg)
-      return NextResponse.json({ error: errorMsg }, { status: 404 })
-    }
+    console.log('📋 選択した日報:', newerReport.id, `(${newerReport.reportDate})`, '&', olderReport.id, `(${olderReport.reportDate})`)
 
     // 小話データの存在は任意（ブログ生成には日報データのみ使用）
     console.log('✅ 日報データが揃いました - ブログ生成を開始します')
@@ -224,7 +163,7 @@ export async function POST(request: Request) {
     const blogData = await generateBlogPostTwoPhase(newerReport, olderReport)
 
     // idempotency_keyを生成
-    const idempotencyKey = `blog-${newerDateString}-${olderDateString}-${Date.now()}`
+    const idempotencyKey = `blog-${newerReport.reportDate}-${olderReport.reportDate}-${Date.now()}`
 
     console.log('💾 Firestoreにブログを保存中...')
 
@@ -232,11 +171,13 @@ export async function POST(request: Request) {
     const blogRef = adminDb.collection('blog_posts').doc()
     const blogPostData = {
       title: blogData.title,
-      slug: generateSlug(blogData.title, newerDateString, olderDateString),
+      slug: generateSlug(blogData.title, newerReport.reportDate, olderReport.reportDate),
       summary: blogData.summary,
       content: blogData.content_md,
-      newerDate: newerDateString,
-      olderDate: olderDateString,
+      newerDate: newerReport.reportDate,
+      olderDate: olderReport.reportDate,
+      newerReportId: newerReport.id,
+      olderReportId: olderReport.id,
       status: 'published',
       publishedAt: FieldValue.serverTimestamp(),
       idempotencyKey: idempotencyKey,

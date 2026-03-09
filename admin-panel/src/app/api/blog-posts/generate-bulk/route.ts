@@ -35,33 +35,44 @@ export async function POST(request: Request) {
     console.log('📝 一括ブログ生成リクエスト受信')
     await logMessage('info', '一括ブログ生成開始（未使用日報を全数ペアリング）')
 
-    // 既存ブログから使用済み日付を収集
+    // 既存ブログから使用済み日報IDを収集（IDベース管理）
     const existingBlogsSnapshot = await adminDb.collection('blog_posts').get()
-    const usedDates = new Set<string>()
+    const usedReportIds = new Set<string>()
+    const oldDateLookups: string[] = []
+
     existingBlogsSnapshot.docs.forEach(doc => {
       const data = doc.data()
-      if (data.newerDate) usedDates.add(data.newerDate)
-      if (data.olderDate) usedDates.add(data.olderDate)
+      if (data.newerReportId) usedReportIds.add(data.newerReportId)
+      if (data.olderReportId) usedReportIds.add(data.olderReportId)
+      // 旧形式ブログ対応: newerReportIdがなければoriginalReportIdを使用
+      if (!data.newerReportId && data.originalReportId) usedReportIds.add(data.originalReportId)
+      // 旧形式ブログ対応: olderReportIdがなければolderDateから検索
+      if (!data.olderReportId && data.olderDate) oldDateLookups.push(data.olderDate)
     })
-    console.log(`📅 使用済み日付: ${usedDates.size}件`)
 
-    // 全日報を取得し、未使用かつ有効なものだけ抽出（日付重複も除去）
+    // 旧形式ブログのolderReportIdを日付から補完
+    for (const date of oldDateLookups) {
+      const snap = await adminDb.collection('daily_reports')
+        .where('reportDate', '==', date).limit(1).get()
+      if (!snap.empty) usedReportIds.add(snap.docs[0].id)
+    }
+
+    console.log(`📋 使用済み日報ID: ${usedReportIds.size}件`)
+
+    // 全日報を取得し、未使用かつ有効なものだけ抽出（IDで判定・同日複数もすべて対象）
     const allReportsSnapshot = await adminDb
       .collection('daily_reports')
       .orderBy('reportDate', 'desc')
       .get()
 
-    const seenDates = new Set<string>()
     const unusedReports = (allReportsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Array<{ id: string; reportDate?: string; customerAttributes?: string; [key: string]: any }>)
       .filter(report => {
         if (!report.reportDate) return false
-        if (usedDates.has(report.reportDate)) return false
+        if (usedReportIds.has(report.id)) return false
         if (!report.customerAttributes?.trim()) return false
-        if (seenDates.has(report.reportDate)) return false
-        seenDates.add(report.reportDate)
         return true
       })
 
@@ -106,6 +117,8 @@ export async function POST(request: Request) {
         content_md: cleanedBody,
         newerDate: pair.newer.reportDate,
         olderDate: pair.older.reportDate,
+        newerReportId: pair.newer.id,
+        olderReportId: pair.older.id,
         originalReportId: pair.newer.id,
         diagnostics: { ...blog.diagnostics, linewrap_ok: true }
       })
@@ -125,6 +138,8 @@ export async function POST(request: Request) {
         content: blogData.content_md,
         newerDate: blogData.newerDate,
         olderDate: blogData.olderDate,
+        newerReportId: blogData.newerReportId,
+        olderReportId: blogData.olderReportId,
         status: 'published',
         publishedAt: FieldValue.serverTimestamp(),
         idempotencyKey,

@@ -208,32 +208,39 @@ async function autoGenerateBlog() {
       return null
     }
 
-    // 既存のブログで使用済みの日付を取得
+    // 既存のブログで使用済みの日報IDを取得（IDベース管理）
     const existingBlogsSnapshot = await adminDb
       .collection('blog_posts')
       .get()
 
-    const usedDates = new Set<string>()
+    const usedReportIds = new Set<string>()
+    const oldDateLookups: string[] = []
+
     existingBlogsSnapshot.docs.forEach(doc => {
       const data = doc.data()
-      if (data.newerDate) usedDates.add(data.newerDate)
-      if (data.olderDate) usedDates.add(data.olderDate)
+      if (data.newerReportId) usedReportIds.add(data.newerReportId)
+      if (data.olderReportId) usedReportIds.add(data.olderReportId)
+      if (!data.newerReportId && data.originalReportId) usedReportIds.add(data.originalReportId)
+      if (!data.olderReportId && data.olderDate) oldDateLookups.push(data.olderDate)
     })
 
-    console.log(`📅 使用済み日付: ${usedDates.size}件`)
+    for (const date of oldDateLookups) {
+      const snap = await adminDb.collection('daily_reports')
+        .where('reportDate', '==', date).limit(1).get()
+      if (!snap.empty) usedReportIds.add(snap.docs[0].id)
+    }
 
-    // 未使用の日報を抽出（日付重複を除去し、各日付で1件のみ使用）
-    const seenDates = new Set<string>()
+    console.log(`📋 使用済み日報ID: ${usedReportIds.size}件`)
+
+    // 未使用の日報を抽出（IDで判定・同日複数もすべて対象）
     const unusedReports = allReports.filter((report: any) => {
       if (!report.reportDate) return false
-      if (usedDates.has(report.reportDate)) return false
+      if (usedReportIds.has(report.id)) return false
       if (!report.customerAttributes?.trim()) return false
-      if (seenDates.has(report.reportDate)) return false
-      seenDates.add(report.reportDate)
       return true
     })
 
-    console.log(`✅ 未使用の日報（ユニーク日付）: ${unusedReports.length}件`)
+    console.log(`✅ 未使用の日報: ${unusedReports.length}件`)
 
     if (unusedReports.length < 2) {
       console.log('⏸️  未使用日報が2件未満のため、ブログ生成をスキップ')
@@ -280,6 +287,8 @@ async function autoGenerateBlog() {
       content: cleanedBody,
       newerDate: newerReport.reportDate,
       olderDate: olderReport.reportDate,
+      newerReportId: newerReport.id,
+      olderReportId: olderReport.id,
       status: 'published',
       publishedAt: FieldValue.serverTimestamp(),
       authorId: null,

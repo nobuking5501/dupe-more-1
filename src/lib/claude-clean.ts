@@ -53,15 +53,16 @@ ${body}`
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-sonnet-4-5',
         max_tokens: 4000,
         temperature: 0.2,
+        system: systemPrompt,
         messages: [{
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `${systemPrompt}\n\n${userPrompt}`
+              text: userPrompt
             }
           ]
         }]

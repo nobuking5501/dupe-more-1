@@ -57,12 +57,13 @@ ${body}`
         model: 'claude-sonnet-4-5',
         max_tokens: 4000,
         temperature: 0.2,
+        system: systemPrompt,
         messages: [{
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `${systemPrompt}\n\n${userPrompt}`
+              text: userPrompt
             }
           ]
         }]

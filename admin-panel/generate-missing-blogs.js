@@ -65,12 +65,13 @@ report_pair = ${JSON.stringify(reportPair, null, 2)}
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20240620',
+      model: 'claude-sonnet-4-5',
       max_tokens: 6000,
       temperature: 0.3,
+      system: systemPrompt,
       messages: [{
         role: 'user',
-        content: `${systemPrompt}\n\n${userPrompt}`
+        content: userPrompt
       }]
     })
   });
@@ -88,7 +89,8 @@ report_pair = ${JSON.stringify(reportPair, null, 2)}
     throw new Error('JSON not found in response');
   }
 
-  const cleanedJson = jsonMatch[0].replace(/[\x00-\x1F\x7F]/g, '');
+  // 改行・タブを保持しつつ、その他の制御文字を除去してJSONをパース
+  const cleanedJson = jsonMatch[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
   return JSON.parse(cleanedJson);
 }
 
@@ -123,12 +125,13 @@ ${body}`;
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20240620',
+      model: 'claude-sonnet-4-5',
       max_tokens: 4000,
       temperature: 0.2,
+      system: systemPrompt,
       messages: [{
         role: 'user',
-        content: `${systemPrompt}\n\n${userPrompt}`
+        content: userPrompt
       }]
     })
   });
@@ -142,12 +145,15 @@ ${body}`;
   return claudeResponse.content[0].text;
 }
 
-function generateSlug(title) {
-  return title
+function generateSlug(title, newerDate, olderDate) {
+  const titleSlug = title
     .toLowerCase()
     .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '-')
     .substring(0, 50);
+  if (titleSlug.length >= 3) return titleSlug;
+  if (newerDate && olderDate) return `blog-${newerDate}-${olderDate}`;
+  return `blog-${Date.now()}`;
 }
 
 async function generateMissingBlogs() {
@@ -239,7 +245,7 @@ async function generateMissingBlogs() {
         const blogRef = db.collection('blog_posts').doc();
         await blogRef.set({
           title: generatedBlog.title,
-          slug: generateSlug(generatedBlog.title),
+          slug: generateSlug(generatedBlog.title, pair.newer.reportDate, pair.older.reportDate),
           summary: generatedBlog.summary,
           content: cleanedBody,
           newerDate: pair.newer.reportDate,

@@ -54,15 +54,10 @@ export async function POST(request: Request) {
       try {
         console.log(`🤖 清書中 ${i + 1}/${allBlogs.length}: ${blog.title}`)
 
-        // 現在のコンテンツが既に清書済みかチェック（行末に改行+スペースがあるか）
-        // 但し、特定の未清書ブログIDは強制的に清書する
-        const forceCleanIds = [
-          'caa368ca-05b1-4012-97dc-9994461b64c6',
-          '7e0d26f8-3aae-4515-be66-326d478f2eee',
-          'd5b1fcd0-9597-466d-8d3f-f4813ed09031'
-        ]
-
-        const isAlreadyCleaned = blog.content && blog.content.includes('\n ') && !forceCleanIds.includes(blog.id)
+        // 清書済み判定: 行頭スペース付き改行が一定数以上あれば清書済みとみなす
+        // 「\n 」が5箇所以上 = 清書ルール（行頭スペース）が適用されている
+        const newlineWithSpaceCount = (blog.content?.match(/\n /g) || []).length
+        const isAlreadyCleaned = newlineWithSpaceCount >= 5
 
         if (isAlreadyCleaned) {
           console.log(`✅ スキップ（既に清書済み）: ${blog.title}`)

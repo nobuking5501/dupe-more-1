@@ -74,12 +74,13 @@ report_pair = ${JSON.stringify(reportPair, null, 2)}
         model: 'claude-sonnet-4-5',
         max_tokens: 6000,
         temperature: 0.3,
+        system: systemPrompt,
         messages: [{
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `${systemPrompt}\n\n${userPrompt}`
+              text: userPrompt
             }
           ]
         }]
@@ -101,8 +102,8 @@ report_pair = ${JSON.stringify(reportPair, null, 2)}
     try {
       const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
-        // 制御文字を除去してからJSONをパース
-        const cleanedJson = jsonMatch[0].replace(/[\x00-\x1F\x7F]/g, '')
+        // 改行・タブを保持しつつ、その他の制御文字を除去してJSONをパース
+        const cleanedJson = jsonMatch[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
         blogData = JSON.parse(cleanedJson)
       } else {
         throw new Error('JSON not found in response')
@@ -122,27 +123,21 @@ report_pair = ${JSON.stringify(reportPair, null, 2)}
 
 export async function callClaudeGenerateBulkAPI(reportPairs: ReportPair[]): Promise<BlogGenerationResult[]> {
   const results: BlogGenerationResult[] = []
-  
-  // 6記事を並行生成（API制限を考慮して3つずつに分割）
-  const batches = [
-    reportPairs.slice(0, 3),
-    reportPairs.slice(3, 6)
-  ]
-  
-  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-    const batch = batches[batchIndex]
-    const batchPromises = batch.map((pair, index) => 
-      callClaudeGenerateAPI(pair, (batchIndex * 3 + index) % 2 === 1) // KEY1とKEY2を交互使用
-    )
-    
+  const BATCH_SIZE = 3
+
+  // 3件ずつバッチ処理（API制限対応）
+  for (let i = 0; i < reportPairs.length; i += BATCH_SIZE) {
+    const batch = reportPairs.slice(i, i + BATCH_SIZE)
+    const batchPromises = batch.map(pair => callClaudeGenerateAPI(pair))
+
     const batchResults = await Promise.all(batchPromises)
     results.push(...batchResults)
-    
+
     // バッチ間で少し待機
-    if (batchIndex < batches.length - 1) {
+    if (i + BATCH_SIZE < reportPairs.length) {
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
-  
+
   return results
 }

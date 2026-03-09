@@ -222,14 +222,18 @@ async function autoGenerateBlog() {
 
     console.log(`📅 使用済み日付: ${usedDates.size}件`)
 
-    // 未使用の日報を抽出
-    const unusedReports = allReports.filter((report: any) =>
-      !usedDates.has(report.reportDate) &&
-      report.customerAttributes &&
-      report.customerAttributes.trim() !== ''
-    )
+    // 未使用の日報を抽出（日付重複を除去し、各日付で1件のみ使用）
+    const seenDates = new Set<string>()
+    const unusedReports = allReports.filter((report: any) => {
+      if (!report.reportDate) return false
+      if (usedDates.has(report.reportDate)) return false
+      if (!report.customerAttributes?.trim()) return false
+      if (seenDates.has(report.reportDate)) return false
+      seenDates.add(report.reportDate)
+      return true
+    })
 
-    console.log(`✅ 未使用の日報: ${unusedReports.length}件`)
+    console.log(`✅ 未使用の日報（ユニーク日付）: ${unusedReports.length}件`)
 
     if (unusedReports.length < 2) {
       console.log('⏸️  未使用日報が2件未満のため、ブログ生成をスキップ')
@@ -257,18 +261,21 @@ async function autoGenerateBlog() {
     console.log('✅ 清書完了')
 
     // ブログをFirestoreに保存
-    const generateSlug = (title: string): string => {
-      return title
+    const generateSlug = (title: string, newerDate?: string, olderDate?: string): string => {
+      const titleSlug = title
         .toLowerCase()
         .replace(/[^\w\s-]/g, '')
         .replace(/\s+/g, '-')
         .substring(0, 50)
+      if (titleSlug.length >= 3) return titleSlug
+      if (newerDate && olderDate) return `blog-${newerDate}-${olderDate}`
+      return `blog-${Date.now()}`
     }
 
     const blogRef = adminDb.collection('blog_posts').doc()
     await blogRef.set({
       title: generatedBlog.title,
-      slug: generateSlug(generatedBlog.title),
+      slug: generateSlug(generatedBlog.title, newerReport.reportDate, olderReport.reportDate),
       summary: generatedBlog.summary,
       content: cleanedBody,
       newerDate: newerReport.reportDate,
@@ -297,6 +304,78 @@ async function autoGenerateBlog() {
     console.error('❌ ブログ自動生成エラー:', error)
     return null
   }
+}
+
+// 小話・Twitter・ブログ生成をバックグラウンドで実行
+async function runBackgroundTasks(reportData: any) {
+  console.log('📚 バックグラウンドタスク開始:', reportData.reportDate)
+
+  // 1. 今回の日報の小話を生成（既存チェックあり）
+  try {
+    const existingStory = await adminDb
+      .collection('short_stories')
+      .where('reportDate', '==', reportData.reportDate)
+      .limit(1)
+      .get()
+
+    if (existingStory.empty) {
+      const generatedStory = await generateShortStory(reportData)
+      if (generatedStory) {
+        const storyRef = adminDb.collection('short_stories').doc()
+        await storyRef.set(generatedStory)
+        console.log('✅ 小話保存完了:', generatedStory.title)
+
+        // 最新の小話をisFeaturedに設定
+        const featuredSnap = await adminDb
+          .collection('short_stories')
+          .where('isFeatured', '==', true)
+          .get()
+        const batch = adminDb.batch()
+        featuredSnap.docs.forEach(doc => batch.update(doc.ref, { isFeatured: false }))
+        batch.update(storyRef, { isFeatured: true })
+        await batch.commit()
+      }
+    } else {
+      console.log('⏸️  小話生成スキップ（既存あり）:', reportData.reportDate)
+    }
+  } catch (e) {
+    console.error('❌ 小話生成エラー:', e)
+  }
+
+  // 2. X（Twitter）投稿
+  try {
+    const twitterShortStory = await generateTwitterShortStory(reportData)
+    if (twitterShortStory) {
+      const postResult = await postToTwitter(twitterShortStory)
+      if (postResult?.success) {
+        await adminDb.collection('twitter_posts').add({
+          reportId: reportData.id,
+          reportDate: reportData.reportDate,
+          tweetId: postResult.tweetId,
+          tweetUrl: postResult.tweetUrl,
+          content: twitterShortStory,
+          createdAt: FieldValue.serverTimestamp()
+        })
+        console.log('✅ X投稿完了:', postResult.tweetUrl)
+      }
+    }
+  } catch (e) {
+    console.error('❌ X投稿エラー:', e)
+  }
+
+  // 3. ブログ自動生成（未使用日報が2件以上のとき）
+  try {
+    const generatedBlog = await autoGenerateBlog()
+    if (generatedBlog) {
+      console.log('✅ ブログ自動生成完了:', generatedBlog.title)
+    } else {
+      console.log('⏸️  ブログ生成スキップ（未使用日報2件未満）')
+    }
+  } catch (e) {
+    console.error('❌ ブログ自動生成エラー:', e)
+  }
+
+  console.log('✅ バックグラウンドタスク完了:', reportData.reportDate)
 }
 
 export async function GET() {
@@ -498,154 +577,16 @@ export async function POST(request: Request) {
 
     console.log('✅ 日報をFirestoreに保存しました:', newReport.id)
 
-    // 小話がない全ての日報に対して小話を自動生成
-    console.log('📚 小話がない日報を確認中...')
-
-    // 全ての日報を取得
-    const allReportsSnapshot = await adminDb
-      .collection('daily_reports')
-      .orderBy('reportDate', 'desc')
-      .get()
-
-    const allReports = allReportsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Array<{ id: string; reportDate?: string; [key: string]: any }>
-
-    // 全ての小話を取得
-    const allStoriesSnapshot = await adminDb
-      .collection('short_stories')
-      .get()
-
-    const storyReportDates = new Set(
-      allStoriesSnapshot.docs.map(doc => doc.data().reportDate)
+    // 小話・Twitter・ブログ生成はバックグラウンドで実行（レスポンスをブロックしない）
+    const reportForBackground = { id: reportRef.id, ...reportData }
+    runBackgroundTasks(reportForBackground).catch(e =>
+      console.error('バックグラウンドタスクエラー:', e)
     )
 
-    // 小話がない日報を特定
-    const reportsWithoutStories = allReports.filter((report: any) =>
-      !storyReportDates.has(report.reportDate)
-    )
-
-    console.log(`✅ 小話が必要な日報: ${reportsWithoutStories.length}件`)
-
-    // 小話がない全ての日報に対して小話を生成
-    const generatedStories = []
-    for (const report of reportsWithoutStories) {
-      console.log(`📝 小話生成中: ${report.reportDate}`)
-      const generatedStory = await generateShortStory(report)
-
-      if (generatedStory) {
-        console.log(`✅ 小話生成成功: ${generatedStory.title}`)
-
-        // Firestoreに保存
-        try {
-          const storyRef = adminDb.collection('short_stories').doc()
-          await storyRef.set(generatedStory)
-          console.log(`💾 小話保存完了: ${storyRef.id}`)
-          generatedStories.push({
-            id: storyRef.id,
-            title: generatedStory.title,
-            reportDate: report.reportDate
-          })
-        } catch (saveError) {
-          console.error(`❌ 小話保存エラー (${report.reportDate}):`, saveError)
-        }
-      } else {
-        console.log(`⚠️ 小話生成失敗: ${report.reportDate}`)
-      }
-    }
-
-    // 最新の小話をisFeatured=trueに設定
-    if (generatedStories.length > 0) {
-      try {
-        // 全ての小話のisFeaturedをfalseに
-        const allStoriesSnapshot2 = await adminDb
-          .collection('short_stories')
-          .where('isFeatured', '==', true)
-          .get()
-
-        const batch = adminDb.batch()
-        allStoriesSnapshot2.docs.forEach(doc => {
-          batch.update(doc.ref, { isFeatured: false })
-        })
-
-        // 最新の小話をisFeatured=trueに
-        const latestStory = generatedStories[0]
-        const latestStoryRef = adminDb.collection('short_stories').doc(latestStory.id)
-        batch.update(latestStoryRef, { isFeatured: true })
-
-        await batch.commit()
-        console.log(`✅ ${latestStory.title} をフィーチャーに設定`)
-      } catch (featureError) {
-        console.error('❌ isFeatured更新エラー:', featureError)
-      }
-    }
-
-    console.log(`🎉 小話生成完了: ${generatedStories.length}件`)
-
-    // X（Twitter）投稿（140文字以内の小話を自動投稿）
-    let twitterPostResult = null
-    try {
-      console.log('🐦 X投稿用の140文字小話を生成中...')
-      const twitterShortStory = await generateTwitterShortStory(newReport)
-
-      if (twitterShortStory) {
-        console.log('✅ Twitter小話生成成功:', twitterShortStory)
-
-        // Xに投稿
-        const postResult = await postToTwitter(twitterShortStory)
-
-        if (postResult && postResult.success) {
-          console.log('✅ X投稿成功:', postResult.tweetUrl)
-          twitterPostResult = postResult
-
-          // 投稿記録をFirestoreに保存
-          try {
-            await adminDb.collection('twitter_posts').add({
-              reportId: newReport.id,
-              reportDate: newReport.reportDate,
-              tweetId: postResult.tweetId,
-              tweetUrl: postResult.tweetUrl,
-              content: twitterShortStory,
-              createdAt: FieldValue.serverTimestamp()
-            })
-            console.log('✅ X投稿記録を保存しました')
-          } catch (recordError) {
-            console.error('⚠️ X投稿記録保存エラー:', recordError)
-          }
-        } else if (postResult) {
-          console.error('❌ X投稿失敗:', postResult.error)
-        }
-      } else {
-        console.log('⚠️ Twitter小話の生成に失敗しました')
-      }
-    } catch (twitterError) {
-      console.error('❌ X投稿処理エラー:', twitterError)
-      // エラーでも処理は継続（X投稿は必須機能ではない）
-    }
-
-    // ブログ自動生成を試みる（未使用の日報が2件以上ある場合）
-    console.log('📰 ブログ自動生成を試みます...')
-    const generatedBlog = await autoGenerateBlog()
-
-    if (generatedBlog) {
-      console.log('✅ ブログが自動生成されました:', generatedBlog.title)
-    } else {
-      console.log('⏸️  ブログ生成条件が満たされていません')
-    }
-
-    const response = {
+    return NextResponse.json({
       report: newReport,
-      generatedStories: generatedStories,
-      generatedBlog: generatedBlog,
-      twitterPost: twitterPostResult,
-      summary: {
-        storiesGenerated: generatedStories.length,
-        blogGenerated: generatedBlog ? 1 : 0
-      }
-    }
-
-    return NextResponse.json(response)
+      message: '日報を保存しました。小話・ブログは自動生成中です。'
+    })
   } catch (error) {
     console.error('日報作成エラー:', error)
     return NextResponse.json({ error: '日報の作成に失敗しました' }, { status: 500 })

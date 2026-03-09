@@ -56,12 +56,16 @@ async function generateBlogPostTwoPhase(newerReport: any, olderReport: any) {
   }
 }
 
-function generateSlug(title: string): string {
-  return title
+function generateSlug(title: string, newerDate?: string, olderDate?: string): string {
+  const titleSlug = title
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '') // 特殊文字を削除
-    .replace(/\s+/g, '-')     // スペースをハイフンに
-    .substring(0, 50)         // 長さ制限
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .substring(0, 50)
+  // 日本語タイトルはtitleSlugが空になるため、日付ベースにフォールバック
+  if (titleSlug.length >= 3) return titleSlug
+  if (newerDate && olderDate) return `blog-${newerDate}-${olderDate}`
+  return `blog-${Date.now()}`
 }
 
 export async function POST(request: Request) {
@@ -88,48 +92,67 @@ export async function POST(request: Request) {
       }
     }
 
-    console.log('📝 ブログ生成リクエスト受信 - 対象日:', targetDate)
-    await logMessage('info', `ブログ生成開始: ${targetDate}`)
+    console.log('📝 ブログ生成リクエスト受信 - 対象日:', targetDate || '未指定')
+    await logMessage('info', `ブログ生成開始: ${targetDate || '未指定'}`)
 
-    // 利用可能な日報の重複しない日付を取得
+    // 既存ブログから使用済み日付を収集
+    const existingBlogsSnapshot = await adminDb.collection('blog_posts').get()
+    const usedDates = new Set<string>()
+    existingBlogsSnapshot.docs.forEach(doc => {
+      const data = doc.data()
+      if (data.newerDate) usedDates.add(data.newerDate)
+      if (data.olderDate) usedDates.add(data.olderDate)
+    })
+
+    // 全日報を取得
     const reportsSnapshot = await adminDb
       .collection('daily_reports')
       .orderBy('reportDate', 'desc')
       .get()
 
-    const availableReports = reportsSnapshot.docs.map(doc => ({
+    const allReports = reportsSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     })) as Array<{ id: string; reportDate?: string; [key: string]: any }>
 
-    if (availableReports.length < 2) {
-      const errorMsg = `ブログ生成には最低2つの日報が必要です`
-      console.error('❌', errorMsg)
-      await logMessage('error', errorMsg)
-      return NextResponse.json({ error: errorMsg }, { status: 400 })
-    }
+    // 重複日付を除去した全日付リスト（新しい順）
+    const uniqueDates = Array.from(new Set(allReports.map(r => r.reportDate).filter(Boolean) as string[]))
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
 
-    // 指定された日付に最も近い2つの日報を選択
-    let newerDateString = targetDate
-    let olderDateString = null
+    // 未使用日付リスト（新しい順）
+    const unusedDates = uniqueDates.filter(d => !usedDates.has(d))
 
-    // 指定日が利用可能な日報に含まれているかチェック（重複を除去）
-    const uniqueDates = new Set(availableReports.map((r: any) => r.reportDate))
-    const availableDates = Array.from(uniqueDates).sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime())
+    console.log('📅 全日付:', uniqueDates.length, '件 / 未使用:', unusedDates.length, '件')
 
-    console.log('📅 利用可能な日付:', availableDates)
-    console.log('📅 対象日付:', targetDate)
+    let newerDateString: string
+    let olderDateString: string | null = null
 
-    if (availableDates.includes(targetDate)) {
-      // 指定日の日報が存在する場合、それより古い日報を探す
-      const targetIndex = availableDates.indexOf(targetDate)
-      if (targetIndex < availableDates.length - 1) {
-        olderDateString = availableDates[targetIndex + 1]
+    if (!targetDate) {
+      // 日付未指定 → 未使用の最新2件を使用
+      if (unusedDates.length < 2) {
+        const errorMsg = `未使用の日報が${unusedDates.length}件しかありません。2件以上必要です。`
+        console.error('❌', errorMsg)
+        await logMessage('error', errorMsg)
+        return NextResponse.json({ error: errorMsg }, { status: 400 })
       }
+      newerDateString = unusedDates[0]
+      olderDateString = unusedDates[1]
     } else {
-      // 指定日の日報が存在しない場合、最新の2つを使用
-      newerDateString = availableDates[0]
-      olderDateString = availableDates[1]
+      // 日付指定 → 指定日 + その次に古い未使用日付をペアにする
+      newerDateString = targetDate
+      const targetIndex = uniqueDates.indexOf(targetDate)
+      if (targetIndex >= 0) {
+        // 指定日より古い未使用日付を探す
+        const olderUnused = uniqueDates.slice(targetIndex + 1).find(d => !usedDates.has(d))
+        olderDateString = olderUnused || null
+      }
+      if (!olderDateString) {
+        // 見つからなければ未使用の最新2件にフォールバック
+        if (unusedDates.length >= 2) {
+          newerDateString = unusedDates[0]
+          olderDateString = unusedDates[1]
+        }
+      }
     }
 
     console.log('📅 選択された日付ペア:', newerDateString, '&', olderDateString)
@@ -209,7 +232,7 @@ export async function POST(request: Request) {
     const blogRef = adminDb.collection('blog_posts').doc()
     const blogPostData = {
       title: blogData.title,
-      slug: blogData.slug,
+      slug: generateSlug(blogData.title, newerDateString, olderDateString),
       summary: blogData.summary,
       content: blogData.content_md,
       newerDate: newerDateString,

@@ -70,15 +70,16 @@ report_pair = ${JSON.stringify(reportPair, null, 2)}
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-sonnet-4-5',
         max_tokens: 6000,
         temperature: 0.3,
+        system: systemPrompt,
         messages: [{
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `${systemPrompt}\n\n${userPrompt}`
+              text: userPrompt
             }
           ]
         }]
@@ -100,8 +101,8 @@ report_pair = ${JSON.stringify(reportPair, null, 2)}
     try {
       const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
-        // 制御文字を除去してからJSONをパース
-        const cleanedJson = jsonMatch[0].replace(/[\x00-\x1F\x7F]/g, '')
+        // 改行・タブを保持しつつ、その他の制御文字を除去してJSONをパース
+        const cleanedJson = jsonMatch[0].replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
         blogData = JSON.parse(cleanedJson)
       } else {
         throw new Error('JSON not found in response')

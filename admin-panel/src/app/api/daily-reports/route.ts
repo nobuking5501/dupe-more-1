@@ -290,7 +290,7 @@ async function autoGenerateBlog() {
       newerReportId: newerReport.id,
       olderReportId: olderReport.id,
       status: 'published',
-      publishedAt: FieldValue.serverTimestamp(),
+      publishedAt: Timestamp.fromDate(new Date(newerReport.reportDate || Date.now())),
       authorId: null,
       originalReportId: newerReport.id,
       tags: ['日報', '脱毛', '障害者専門'],

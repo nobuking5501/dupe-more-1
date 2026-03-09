@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebaseAdmin'
-import { FieldValue } from 'firebase-admin/firestore'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { callClaudeGenerateBulkAPI } from '@/lib/claude-generate'
 import { callClaudeCleanAPI } from '@/lib/claude-clean'
 
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
         newerReportId: blogData.newerReportId,
         olderReportId: blogData.olderReportId,
         status: 'published',
-        publishedAt: FieldValue.serverTimestamp(),
+        publishedAt: Timestamp.fromDate(new Date(blogData.newerDate)),
         idempotencyKey,
         authorId: null,
         originalReportId: blogData.originalReportId,
